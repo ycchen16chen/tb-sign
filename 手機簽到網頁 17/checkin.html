@@ -1,0 +1,2736 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>會議簽到</title>
+<style>
+:root{--ink:#14213d;--sub:#5b6472;--bg:#eef1f5;--card:#fff;--line:#d6dbe2;--acc:#1f5fae;--ok:#166534;--err:#b3261e;--red:#b3261e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding:20px max(14px,env(safe-area-inset-left)) 40px max(14px,env(safe-area-inset-right))}
+h1{font-size:21px;margin:0 0 4px}
+.sub{color:var(--sub);font-size:14px;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:10px}
+.grp{font-size:13px;color:var(--sub);margin:6px 2px 0}
+.who{font:inherit;font-size:19px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-height:56px;width:100%;cursor:pointer;color:var(--ink);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.who small{font-size:12px;color:var(--red);white-space:nowrap}
+.who.me{border-color:var(--ok);background:#ecfdf5}
+button.b{font:inherit;font-size:17px;border:0;border-radius:10px;padding:13px;min-height:50px;width:100%;cursor:pointer}
+.pri{background:var(--acc);color:#fff}.sec{background:#e5e7eb;color:var(--ink)}.red{background:#fdecea;color:var(--red);border:1px solid #f3c1bb!important}
+button.b:disabled{opacity:.45}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.big{font-size:19px;line-height:1.7}
+.msg{font-size:14.5px;line-height:1.6;min-height:1.2em}.msg.err{color:var(--err)}
+.note{font-size:12.5px;color:var(--sub);line-height:1.7}
+.done{font-size:60px;text-align:center;line-height:1.1}
+.stampbox{border:1px solid #f0d4d0;background:#fdf6f5;border-radius:12px;padding:12px;display:grid;gap:8px}
+.stampbox img{max-height:80px;max-width:220px;background:#fff;border:1px solid #f0d4d0;border-radius:6px;padding:4px;justify-self:start}
+label.cons{display:flex;gap:8px;align-items:flex-start;font-size:14px;line-height:1.6}
+label.cons input{width:20px;height:20px;flex:none;margin-top:2px}
+.pad{position:relative;border:1px dashed #94a3b8;border-radius:10px;background:#fff;touch-action:none}
+.pad canvas{display:block;width:100%;height:200px;touch-action:none}
+.pad .base{position:absolute;left:8%;right:8%;bottom:28%;border-bottom:1px solid #cbd5e1;pointer-events:none}
+.pad .ph{position:absolute;left:0;right:0;top:40%;text-align:center;color:#94a3b8;font-size:14px;pointer-events:none}
+input[type=file]{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>結核病管理小組會議簽到</h1>
+  <p class="sub" id="mt">請用手機相機掃描會議室螢幕上的 QR Code</p>
+  <div class="card" id="box"></div>
+  <p class="note" style="margin-top:12px">名單只顯示在這支手機上，不會送到網站。簽名或印章只傳給院內系統，院內收到後即從雲端刪除。</p>
+</div>
+<script>//---------------------------------------------------------------------
+//
+// QR Code Generator for JavaScript
+//
+// Copyright (c) 2009 Kazuhiko Arase
+//
+// URL: http://www.d-project.com/
+//
+// Licensed under the MIT license:
+//  http://www.opensource.org/licenses/mit-license.php
+//
+// The word 'QR Code' is registered trademark of
+// DENSO WAVE INCORPORATED
+//  http://www.denso-wave.com/qrcode/faqpatent-e.html
+//
+//---------------------------------------------------------------------
+
+var qrcode = function() {
+
+  //---------------------------------------------------------------------
+  // qrcode
+  //---------------------------------------------------------------------
+
+  /**
+   * qrcode
+   * @param typeNumber 1 to 40
+   * @param errorCorrectionLevel 'L','M','Q','H'
+   */
+  var qrcode = function(typeNumber, errorCorrectionLevel) {
+
+    var PAD0 = 0xEC;
+    var PAD1 = 0x11;
+
+    var _typeNumber = typeNumber;
+    var _errorCorrectionLevel = QRErrorCorrectionLevel[errorCorrectionLevel];
+    var _modules = null;
+    var _moduleCount = 0;
+    var _dataCache = null;
+    var _dataList = [];
+
+    var _this = {};
+
+    var makeImpl = function(test, maskPattern) {
+
+      _moduleCount = _typeNumber * 4 + 17;
+      _modules = function(moduleCount) {
+        var modules = new Array(moduleCount);
+        for (var row = 0; row < moduleCount; row += 1) {
+          modules[row] = new Array(moduleCount);
+          for (var col = 0; col < moduleCount; col += 1) {
+            modules[row][col] = null;
+          }
+        }
+        return modules;
+      }(_moduleCount);
+
+      setupPositionProbePattern(0, 0);
+      setupPositionProbePattern(_moduleCount - 7, 0);
+      setupPositionProbePattern(0, _moduleCount - 7);
+      setupPositionAdjustPattern();
+      setupTimingPattern();
+      setupTypeInfo(test, maskPattern);
+
+      if (_typeNumber >= 7) {
+        setupTypeNumber(test);
+      }
+
+      if (_dataCache == null) {
+        _dataCache = createData(_typeNumber, _errorCorrectionLevel, _dataList);
+      }
+
+      mapData(_dataCache, maskPattern);
+    };
+
+    var setupPositionProbePattern = function(row, col) {
+
+      for (var r = -1; r <= 7; r += 1) {
+
+        if (row + r <= -1 || _moduleCount <= row + r) continue;
+
+        for (var c = -1; c <= 7; c += 1) {
+
+          if (col + c <= -1 || _moduleCount <= col + c) continue;
+
+          if ( (0 <= r && r <= 6 && (c == 0 || c == 6) )
+              || (0 <= c && c <= 6 && (r == 0 || r == 6) )
+              || (2 <= r && r <= 4 && 2 <= c && c <= 4) ) {
+            _modules[row + r][col + c] = true;
+          } else {
+            _modules[row + r][col + c] = false;
+          }
+        }
+      }
+    };
+
+    var getBestMaskPattern = function() {
+
+      var minLostPoint = 0;
+      var pattern = 0;
+
+      for (var i = 0; i < 8; i += 1) {
+
+        makeImpl(true, i);
+
+        var lostPoint = QRUtil.getLostPoint(_this);
+
+        if (i == 0 || minLostPoint > lostPoint) {
+          minLostPoint = lostPoint;
+          pattern = i;
+        }
+      }
+
+      return pattern;
+    };
+
+    var setupTimingPattern = function() {
+
+      for (var r = 8; r < _moduleCount - 8; r += 1) {
+        if (_modules[r][6] != null) {
+          continue;
+        }
+        _modules[r][6] = (r % 2 == 0);
+      }
+
+      for (var c = 8; c < _moduleCount - 8; c += 1) {
+        if (_modules[6][c] != null) {
+          continue;
+        }
+        _modules[6][c] = (c % 2 == 0);
+      }
+    };
+
+    var setupPositionAdjustPattern = function() {
+
+      var pos = QRUtil.getPatternPosition(_typeNumber);
+
+      for (var i = 0; i < pos.length; i += 1) {
+
+        for (var j = 0; j < pos.length; j += 1) {
+
+          var row = pos[i];
+          var col = pos[j];
+
+          if (_modules[row][col] != null) {
+            continue;
+          }
+
+          for (var r = -2; r <= 2; r += 1) {
+
+            for (var c = -2; c <= 2; c += 1) {
+
+              if (r == -2 || r == 2 || c == -2 || c == 2
+                  || (r == 0 && c == 0) ) {
+                _modules[row + r][col + c] = true;
+              } else {
+                _modules[row + r][col + c] = false;
+              }
+            }
+          }
+        }
+      }
+    };
+
+    var setupTypeNumber = function(test) {
+
+      var bits = QRUtil.getBCHTypeNumber(_typeNumber);
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[Math.floor(i / 3)][i % 3 + _moduleCount - 8 - 3] = mod;
+      }
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[i % 3 + _moduleCount - 8 - 3][Math.floor(i / 3)] = mod;
+      }
+    };
+
+    var setupTypeInfo = function(test, maskPattern) {
+
+      var data = (_errorCorrectionLevel << 3) | maskPattern;
+      var bits = QRUtil.getBCHTypeInfo(data);
+
+      // vertical
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 6) {
+          _modules[i][8] = mod;
+        } else if (i < 8) {
+          _modules[i + 1][8] = mod;
+        } else {
+          _modules[_moduleCount - 15 + i][8] = mod;
+        }
+      }
+
+      // horizontal
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 8) {
+          _modules[8][_moduleCount - i - 1] = mod;
+        } else if (i < 9) {
+          _modules[8][15 - i - 1 + 1] = mod;
+        } else {
+          _modules[8][15 - i - 1] = mod;
+        }
+      }
+
+      // fixed module
+      _modules[_moduleCount - 8][8] = (!test);
+    };
+
+    var mapData = function(data, maskPattern) {
+
+      var inc = -1;
+      var row = _moduleCount - 1;
+      var bitIndex = 7;
+      var byteIndex = 0;
+      var maskFunc = QRUtil.getMaskFunction(maskPattern);
+
+      for (var col = _moduleCount - 1; col > 0; col -= 2) {
+
+        if (col == 6) col -= 1;
+
+        while (true) {
+
+          for (var c = 0; c < 2; c += 1) {
+
+            if (_modules[row][col - c] == null) {
+
+              var dark = false;
+
+              if (byteIndex < data.length) {
+                dark = ( ( (data[byteIndex] >>> bitIndex) & 1) == 1);
+              }
+
+              var mask = maskFunc(row, col - c);
+
+              if (mask) {
+                dark = !dark;
+              }
+
+              _modules[row][col - c] = dark;
+              bitIndex -= 1;
+
+              if (bitIndex == -1) {
+                byteIndex += 1;
+                bitIndex = 7;
+              }
+            }
+          }
+
+          row += inc;
+
+          if (row < 0 || _moduleCount <= row) {
+            row -= inc;
+            inc = -inc;
+            break;
+          }
+        }
+      }
+    };
+
+    var createBytes = function(buffer, rsBlocks) {
+
+      var offset = 0;
+
+      var maxDcCount = 0;
+      var maxEcCount = 0;
+
+      var dcdata = new Array(rsBlocks.length);
+      var ecdata = new Array(rsBlocks.length);
+
+      for (var r = 0; r < rsBlocks.length; r += 1) {
+
+        var dcCount = rsBlocks[r].dataCount;
+        var ecCount = rsBlocks[r].totalCount - dcCount;
+
+        maxDcCount = Math.max(maxDcCount, dcCount);
+        maxEcCount = Math.max(maxEcCount, ecCount);
+
+        dcdata[r] = new Array(dcCount);
+
+        for (var i = 0; i < dcdata[r].length; i += 1) {
+          dcdata[r][i] = 0xff & buffer.getBuffer()[i + offset];
+        }
+        offset += dcCount;
+
+        var rsPoly = QRUtil.getErrorCorrectPolynomial(ecCount);
+        var rawPoly = qrPolynomial(dcdata[r], rsPoly.getLength() - 1);
+
+        var modPoly = rawPoly.mod(rsPoly);
+        ecdata[r] = new Array(rsPoly.getLength() - 1);
+        for (var i = 0; i < ecdata[r].length; i += 1) {
+          var modIndex = i + modPoly.getLength() - ecdata[r].length;
+          ecdata[r][i] = (modIndex >= 0)? modPoly.getAt(modIndex) : 0;
+        }
+      }
+
+      var totalCodeCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalCodeCount += rsBlocks[i].totalCount;
+      }
+
+      var data = new Array(totalCodeCount);
+      var index = 0;
+
+      for (var i = 0; i < maxDcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < dcdata[r].length) {
+            data[index] = dcdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      for (var i = 0; i < maxEcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < ecdata[r].length) {
+            data[index] = ecdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      return data;
+    };
+
+    var createData = function(typeNumber, errorCorrectionLevel, dataList) {
+
+      var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, errorCorrectionLevel);
+
+      var buffer = qrBitBuffer();
+
+      for (var i = 0; i < dataList.length; i += 1) {
+        var data = dataList[i];
+        buffer.put(data.getMode(), 4);
+        buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+        data.write(buffer);
+      }
+
+      // calc num max data.
+      var totalDataCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalDataCount += rsBlocks[i].dataCount;
+      }
+
+      if (buffer.getLengthInBits() > totalDataCount * 8) {
+        throw 'code length overflow. ('
+          + buffer.getLengthInBits()
+          + '>'
+          + totalDataCount * 8
+          + ')';
+      }
+
+      // end code
+      if (buffer.getLengthInBits() + 4 <= totalDataCount * 8) {
+        buffer.put(0, 4);
+      }
+
+      // padding
+      while (buffer.getLengthInBits() % 8 != 0) {
+        buffer.putBit(false);
+      }
+
+      // padding
+      while (true) {
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD0, 8);
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD1, 8);
+      }
+
+      return createBytes(buffer, rsBlocks);
+    };
+
+    _this.addData = function(data, mode) {
+
+      mode = mode || 'Byte';
+
+      var newData = null;
+
+      switch(mode) {
+      case 'Numeric' :
+        newData = qrNumber(data);
+        break;
+      case 'Alphanumeric' :
+        newData = qrAlphaNum(data);
+        break;
+      case 'Byte' :
+        newData = qr8BitByte(data);
+        break;
+      case 'Kanji' :
+        newData = qrKanji(data);
+        break;
+      default :
+        throw 'mode:' + mode;
+      }
+
+      _dataList.push(newData);
+      _dataCache = null;
+    };
+
+    _this.isDark = function(row, col) {
+      if (row < 0 || _moduleCount <= row || col < 0 || _moduleCount <= col) {
+        throw row + ',' + col;
+      }
+      return _modules[row][col];
+    };
+
+    _this.getModuleCount = function() {
+      return _moduleCount;
+    };
+
+    _this.make = function() {
+      if (_typeNumber < 1) {
+        var typeNumber = 1;
+
+        for (; typeNumber < 40; typeNumber++) {
+          var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, _errorCorrectionLevel);
+          var buffer = qrBitBuffer();
+
+          for (var i = 0; i < _dataList.length; i++) {
+            var data = _dataList[i];
+            buffer.put(data.getMode(), 4);
+            buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+            data.write(buffer);
+          }
+
+          var totalDataCount = 0;
+          for (var i = 0; i < rsBlocks.length; i++) {
+            totalDataCount += rsBlocks[i].dataCount;
+          }
+
+          if (buffer.getLengthInBits() <= totalDataCount * 8) {
+            break;
+          }
+        }
+
+        _typeNumber = typeNumber;
+      }
+
+      makeImpl(false, getBestMaskPattern() );
+    };
+
+    _this.createTableTag = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var qrHtml = '';
+
+      qrHtml += '<table style="';
+      qrHtml += ' border-width: 0px; border-style: none;';
+      qrHtml += ' border-collapse: collapse;';
+      qrHtml += ' padding: 0px; margin: ' + margin + 'px;';
+      qrHtml += '">';
+      qrHtml += '<tbody>';
+
+      for (var r = 0; r < _this.getModuleCount(); r += 1) {
+
+        qrHtml += '<tr>';
+
+        for (var c = 0; c < _this.getModuleCount(); c += 1) {
+          qrHtml += '<td style="';
+          qrHtml += ' border-width: 0px; border-style: none;';
+          qrHtml += ' border-collapse: collapse;';
+          qrHtml += ' padding: 0px; margin: 0px;';
+          qrHtml += ' width: ' + cellSize + 'px;';
+          qrHtml += ' height: ' + cellSize + 'px;';
+          qrHtml += ' background-color: ';
+          qrHtml += _this.isDark(r, c)? '#000000' : '#ffffff';
+          qrHtml += ';';
+          qrHtml += '"/>';
+        }
+
+        qrHtml += '</tr>';
+      }
+
+      qrHtml += '</tbody>';
+      qrHtml += '</table>';
+
+      return qrHtml;
+    };
+
+    _this.createSvgTag = function(cellSize, margin, alt, title) {
+
+      var opts = {};
+      if (typeof arguments[0] == 'object') {
+        // Called by options.
+        opts = arguments[0];
+        // overwrite cellSize and margin.
+        cellSize = opts.cellSize;
+        margin = opts.margin;
+        alt = opts.alt;
+        title = opts.title;
+      }
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      // Compose alt property surrogate
+      alt = (typeof alt === 'string') ? {text: alt} : alt || {};
+      alt.text = alt.text || null;
+      alt.id = (alt.text) ? alt.id || 'qrcode-description' : null;
+
+      // Compose title property surrogate
+      title = (typeof title === 'string') ? {text: title} : title || {};
+      title.text = title.text || null;
+      title.id = (title.text) ? title.id || 'qrcode-title' : null;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var c, mc, r, mr, qrSvg='', rect;
+
+      rect = 'l' + cellSize + ',0 0,' + cellSize +
+        ' -' + cellSize + ',0 0,-' + cellSize + 'z ';
+
+      qrSvg += '<svg version="1.1" xmlns="http://www.w3.org/2000/svg"';
+      qrSvg += !opts.scalable ? ' width="' + size + 'px" height="' + size + 'px"' : '';
+      qrSvg += ' viewBox="0 0 ' + size + ' ' + size + '" ';
+      qrSvg += ' preserveAspectRatio="xMinYMin meet"';
+      qrSvg += (title.text || alt.text) ? ' role="img" aria-labelledby="' +
+          escapeXml([title.id, alt.id].join(' ').trim() ) + '"' : '';
+      qrSvg += '>';
+      qrSvg += (title.text) ? '<title id="' + escapeXml(title.id) + '">' +
+          escapeXml(title.text) + '</title>' : '';
+      qrSvg += (alt.text) ? '<description id="' + escapeXml(alt.id) + '">' +
+          escapeXml(alt.text) + '</description>' : '';
+      qrSvg += '<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>';
+      qrSvg += '<path d="';
+
+      for (r = 0; r < _this.getModuleCount(); r += 1) {
+        mr = r * cellSize + margin;
+        for (c = 0; c < _this.getModuleCount(); c += 1) {
+          if (_this.isDark(r, c) ) {
+            mc = c*cellSize+margin;
+            qrSvg += 'M' + mc + ',' + mr + rect;
+          }
+        }
+      }
+
+      qrSvg += '" stroke="transparent" fill="black"/>';
+      qrSvg += '</svg>';
+
+      return qrSvg;
+    };
+
+    _this.createDataURL = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      return createDataURL(size, size, function(x, y) {
+        if (min <= x && x < max && min <= y && y < max) {
+          var c = Math.floor( (x - min) / cellSize);
+          var r = Math.floor( (y - min) / cellSize);
+          return _this.isDark(r, c)? 0 : 1;
+        } else {
+          return 1;
+        }
+      } );
+    };
+
+    _this.createImgTag = function(cellSize, margin, alt) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+
+      var img = '';
+      img += '<img';
+      img += '\u0020src="';
+      img += _this.createDataURL(cellSize, margin);
+      img += '"';
+      img += '\u0020width="';
+      img += size;
+      img += '"';
+      img += '\u0020height="';
+      img += size;
+      img += '"';
+      if (alt) {
+        img += '\u0020alt="';
+        img += escapeXml(alt);
+        img += '"';
+      }
+      img += '/>';
+
+      return img;
+    };
+
+    var escapeXml = function(s) {
+      var escaped = '';
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charAt(i);
+        switch(c) {
+        case '<': escaped += '&lt;'; break;
+        case '>': escaped += '&gt;'; break;
+        case '&': escaped += '&amp;'; break;
+        case '"': escaped += '&quot;'; break;
+        default : escaped += c; break;
+        }
+      }
+      return escaped;
+    };
+
+    var _createHalfASCII = function(margin) {
+      var cellSize = 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r1, r2, p;
+
+      var blocks = {
+        '██': '█',
+        '█ ': '▀',
+        ' █': '▄',
+        '  ': ' '
+      };
+
+      var blocksLastLineNoMargin = {
+        '██': '▀',
+        '█ ': '▀',
+        ' █': ' ',
+        '  ': ' '
+      };
+
+      var ascii = '';
+      for (y = 0; y < size; y += 2) {
+        r1 = Math.floor((y - min) / cellSize);
+        r2 = Math.floor((y + 1 - min) / cellSize);
+        for (x = 0; x < size; x += 1) {
+          p = '█';
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r1, Math.floor((x - min) / cellSize))) {
+            p = ' ';
+          }
+
+          if (min <= x && x < max && min <= y+1 && y+1 < max && _this.isDark(r2, Math.floor((x - min) / cellSize))) {
+            p += ' ';
+          }
+          else {
+            p += '█';
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          ascii += (margin < 1 && y+1 >= max) ? blocksLastLineNoMargin[p] : blocks[p];
+        }
+
+        ascii += '\n';
+      }
+
+      if (size % 2 && margin > 0) {
+        return ascii.substring(0, ascii.length - size - 1) + Array(size+1).join('▀');
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.createASCII = function(cellSize, margin) {
+      cellSize = cellSize || 1;
+
+      if (cellSize < 2) {
+        return _createHalfASCII(margin);
+      }
+
+      cellSize -= 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r, p;
+
+      var white = Array(cellSize+1).join('██');
+      var black = Array(cellSize+1).join('  ');
+
+      var ascii = '';
+      var line = '';
+      for (y = 0; y < size; y += 1) {
+        r = Math.floor( (y - min) / cellSize);
+        line = '';
+        for (x = 0; x < size; x += 1) {
+          p = 1;
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r, Math.floor((x - min) / cellSize))) {
+            p = 0;
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          line += p ? white : black;
+        }
+
+        for (r = 0; r < cellSize; r += 1) {
+          ascii += line + '\n';
+        }
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.renderTo2dContext = function(context, cellSize) {
+      cellSize = cellSize || 2;
+      var length = _this.getModuleCount();
+      for (var row = 0; row < length; row++) {
+        for (var col = 0; col < length; col++) {
+          context.fillStyle = _this.isDark(row, col) ? 'black' : 'white';
+          context.fillRect(row * cellSize, col * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrcode.stringToBytes
+  //---------------------------------------------------------------------
+
+  qrcode.stringToBytesFuncs = {
+    'default' : function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        bytes.push(c & 0xff);
+      }
+      return bytes;
+    }
+  };
+
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['default'];
+
+  //---------------------------------------------------------------------
+  // qrcode.createStringToBytes
+  //---------------------------------------------------------------------
+
+  /**
+   * @param unicodeData base64 string of byte array.
+   * [16bit Unicode],[16bit Bytes], ...
+   * @param numChars
+   */
+  qrcode.createStringToBytes = function(unicodeData, numChars) {
+
+    // create conversion map.
+
+    var unicodeMap = function() {
+
+      var bin = base64DecodeInputStream(unicodeData);
+      var read = function() {
+        var b = bin.read();
+        if (b == -1) throw 'eof';
+        return b;
+      };
+
+      var count = 0;
+      var unicodeMap = {};
+      while (true) {
+        var b0 = bin.read();
+        if (b0 == -1) break;
+        var b1 = read();
+        var b2 = read();
+        var b3 = read();
+        var k = String.fromCharCode( (b0 << 8) | b1);
+        var v = (b2 << 8) | b3;
+        unicodeMap[k] = v;
+        count += 1;
+      }
+      if (count != numChars) {
+        throw count + ' != ' + numChars;
+      }
+
+      return unicodeMap;
+    }();
+
+    var unknownChar = '?'.charCodeAt(0);
+
+    return function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        if (c < 128) {
+          bytes.push(c);
+        } else {
+          var b = unicodeMap[s.charAt(i)];
+          if (typeof b == 'number') {
+            if ( (b & 0xff) == b) {
+              // 1byte
+              bytes.push(b);
+            } else {
+              // 2bytes
+              bytes.push(b >>> 8);
+              bytes.push(b & 0xff);
+            }
+          } else {
+            bytes.push(unknownChar);
+          }
+        }
+      }
+      return bytes;
+    };
+  };
+
+  //---------------------------------------------------------------------
+  // QRMode
+  //---------------------------------------------------------------------
+
+  var QRMode = {
+    MODE_NUMBER :    1 << 0,
+    MODE_ALPHA_NUM : 1 << 1,
+    MODE_8BIT_BYTE : 1 << 2,
+    MODE_KANJI :     1 << 3
+  };
+
+  //---------------------------------------------------------------------
+  // QRErrorCorrectionLevel
+  //---------------------------------------------------------------------
+
+  var QRErrorCorrectionLevel = {
+    L : 1,
+    M : 0,
+    Q : 3,
+    H : 2
+  };
+
+  //---------------------------------------------------------------------
+  // QRMaskPattern
+  //---------------------------------------------------------------------
+
+  var QRMaskPattern = {
+    PATTERN000 : 0,
+    PATTERN001 : 1,
+    PATTERN010 : 2,
+    PATTERN011 : 3,
+    PATTERN100 : 4,
+    PATTERN101 : 5,
+    PATTERN110 : 6,
+    PATTERN111 : 7
+  };
+
+  //---------------------------------------------------------------------
+  // QRUtil
+  //---------------------------------------------------------------------
+
+  var QRUtil = function() {
+
+    var PATTERN_POSITION_TABLE = [
+      [],
+      [6, 18],
+      [6, 22],
+      [6, 26],
+      [6, 30],
+      [6, 34],
+      [6, 22, 38],
+      [6, 24, 42],
+      [6, 26, 46],
+      [6, 28, 50],
+      [6, 30, 54],
+      [6, 32, 58],
+      [6, 34, 62],
+      [6, 26, 46, 66],
+      [6, 26, 48, 70],
+      [6, 26, 50, 74],
+      [6, 30, 54, 78],
+      [6, 30, 56, 82],
+      [6, 30, 58, 86],
+      [6, 34, 62, 90],
+      [6, 28, 50, 72, 94],
+      [6, 26, 50, 74, 98],
+      [6, 30, 54, 78, 102],
+      [6, 28, 54, 80, 106],
+      [6, 32, 58, 84, 110],
+      [6, 30, 58, 86, 114],
+      [6, 34, 62, 90, 118],
+      [6, 26, 50, 74, 98, 122],
+      [6, 30, 54, 78, 102, 126],
+      [6, 26, 52, 78, 104, 130],
+      [6, 30, 56, 82, 108, 134],
+      [6, 34, 60, 86, 112, 138],
+      [6, 30, 58, 86, 114, 142],
+      [6, 34, 62, 90, 118, 146],
+      [6, 30, 54, 78, 102, 126, 150],
+      [6, 24, 50, 76, 102, 128, 154],
+      [6, 28, 54, 80, 106, 132, 158],
+      [6, 32, 58, 84, 110, 136, 162],
+      [6, 26, 54, 82, 110, 138, 166],
+      [6, 30, 58, 86, 114, 142, 170]
+    ];
+    var G15 = (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) | (1 << 0);
+    var G18 = (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5) | (1 << 2) | (1 << 0);
+    var G15_MASK = (1 << 14) | (1 << 12) | (1 << 10) | (1 << 4) | (1 << 1);
+
+    var _this = {};
+
+    var getBCHDigit = function(data) {
+      var digit = 0;
+      while (data != 0) {
+        digit += 1;
+        data >>>= 1;
+      }
+      return digit;
+    };
+
+    _this.getBCHTypeInfo = function(data) {
+      var d = data << 10;
+      while (getBCHDigit(d) - getBCHDigit(G15) >= 0) {
+        d ^= (G15 << (getBCHDigit(d) - getBCHDigit(G15) ) );
+      }
+      return ( (data << 10) | d) ^ G15_MASK;
+    };
+
+    _this.getBCHTypeNumber = function(data) {
+      var d = data << 12;
+      while (getBCHDigit(d) - getBCHDigit(G18) >= 0) {
+        d ^= (G18 << (getBCHDigit(d) - getBCHDigit(G18) ) );
+      }
+      return (data << 12) | d;
+    };
+
+    _this.getPatternPosition = function(typeNumber) {
+      return PATTERN_POSITION_TABLE[typeNumber - 1];
+    };
+
+    _this.getMaskFunction = function(maskPattern) {
+
+      switch (maskPattern) {
+
+      case QRMaskPattern.PATTERN000 :
+        return function(i, j) { return (i + j) % 2 == 0; };
+      case QRMaskPattern.PATTERN001 :
+        return function(i, j) { return i % 2 == 0; };
+      case QRMaskPattern.PATTERN010 :
+        return function(i, j) { return j % 3 == 0; };
+      case QRMaskPattern.PATTERN011 :
+        return function(i, j) { return (i + j) % 3 == 0; };
+      case QRMaskPattern.PATTERN100 :
+        return function(i, j) { return (Math.floor(i / 2) + Math.floor(j / 3) ) % 2 == 0; };
+      case QRMaskPattern.PATTERN101 :
+        return function(i, j) { return (i * j) % 2 + (i * j) % 3 == 0; };
+      case QRMaskPattern.PATTERN110 :
+        return function(i, j) { return ( (i * j) % 2 + (i * j) % 3) % 2 == 0; };
+      case QRMaskPattern.PATTERN111 :
+        return function(i, j) { return ( (i * j) % 3 + (i + j) % 2) % 2 == 0; };
+
+      default :
+        throw 'bad maskPattern:' + maskPattern;
+      }
+    };
+
+    _this.getErrorCorrectPolynomial = function(errorCorrectLength) {
+      var a = qrPolynomial([1], 0);
+      for (var i = 0; i < errorCorrectLength; i += 1) {
+        a = a.multiply(qrPolynomial([1, QRMath.gexp(i)], 0) );
+      }
+      return a;
+    };
+
+    _this.getLengthInBits = function(mode, type) {
+
+      if (1 <= type && type < 10) {
+
+        // 1 - 9
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 10;
+        case QRMode.MODE_ALPHA_NUM : return 9;
+        case QRMode.MODE_8BIT_BYTE : return 8;
+        case QRMode.MODE_KANJI     : return 8;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 27) {
+
+        // 10 - 26
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 12;
+        case QRMode.MODE_ALPHA_NUM : return 11;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 10;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 41) {
+
+        // 27 - 40
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 14;
+        case QRMode.MODE_ALPHA_NUM : return 13;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 12;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else {
+        throw 'type:' + type;
+      }
+    };
+
+    _this.getLostPoint = function(qrcode) {
+
+      var moduleCount = qrcode.getModuleCount();
+
+      var lostPoint = 0;
+
+      // LEVEL1
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount; col += 1) {
+
+          var sameCount = 0;
+          var dark = qrcode.isDark(row, col);
+
+          for (var r = -1; r <= 1; r += 1) {
+
+            if (row + r < 0 || moduleCount <= row + r) {
+              continue;
+            }
+
+            for (var c = -1; c <= 1; c += 1) {
+
+              if (col + c < 0 || moduleCount <= col + c) {
+                continue;
+              }
+
+              if (r == 0 && c == 0) {
+                continue;
+              }
+
+              if (dark == qrcode.isDark(row + r, col + c) ) {
+                sameCount += 1;
+              }
+            }
+          }
+
+          if (sameCount > 5) {
+            lostPoint += (3 + sameCount - 5);
+          }
+        }
+      };
+
+      // LEVEL2
+
+      for (var row = 0; row < moduleCount - 1; row += 1) {
+        for (var col = 0; col < moduleCount - 1; col += 1) {
+          var count = 0;
+          if (qrcode.isDark(row, col) ) count += 1;
+          if (qrcode.isDark(row + 1, col) ) count += 1;
+          if (qrcode.isDark(row, col + 1) ) count += 1;
+          if (qrcode.isDark(row + 1, col + 1) ) count += 1;
+          if (count == 0 || count == 4) {
+            lostPoint += 3;
+          }
+        }
+      }
+
+      // LEVEL3
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount - 6; col += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row, col + 1)
+              &&  qrcode.isDark(row, col + 2)
+              &&  qrcode.isDark(row, col + 3)
+              &&  qrcode.isDark(row, col + 4)
+              && !qrcode.isDark(row, col + 5)
+              &&  qrcode.isDark(row, col + 6) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount - 6; row += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row + 1, col)
+              &&  qrcode.isDark(row + 2, col)
+              &&  qrcode.isDark(row + 3, col)
+              &&  qrcode.isDark(row + 4, col)
+              && !qrcode.isDark(row + 5, col)
+              &&  qrcode.isDark(row + 6, col) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      // LEVEL4
+
+      var darkCount = 0;
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount; row += 1) {
+          if (qrcode.isDark(row, col) ) {
+            darkCount += 1;
+          }
+        }
+      }
+
+      var ratio = Math.abs(100 * darkCount / moduleCount / moduleCount - 50) / 5;
+      lostPoint += ratio * 10;
+
+      return lostPoint;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // QRMath
+  //---------------------------------------------------------------------
+
+  var QRMath = function() {
+
+    var EXP_TABLE = new Array(256);
+    var LOG_TABLE = new Array(256);
+
+    // initialize tables
+    for (var i = 0; i < 8; i += 1) {
+      EXP_TABLE[i] = 1 << i;
+    }
+    for (var i = 8; i < 256; i += 1) {
+      EXP_TABLE[i] = EXP_TABLE[i - 4]
+        ^ EXP_TABLE[i - 5]
+        ^ EXP_TABLE[i - 6]
+        ^ EXP_TABLE[i - 8];
+    }
+    for (var i = 0; i < 255; i += 1) {
+      LOG_TABLE[EXP_TABLE[i] ] = i;
+    }
+
+    var _this = {};
+
+    _this.glog = function(n) {
+
+      if (n < 1) {
+        throw 'glog(' + n + ')';
+      }
+
+      return LOG_TABLE[n];
+    };
+
+    _this.gexp = function(n) {
+
+      while (n < 0) {
+        n += 255;
+      }
+
+      while (n >= 256) {
+        n -= 255;
+      }
+
+      return EXP_TABLE[n];
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrPolynomial
+  //---------------------------------------------------------------------
+
+  function qrPolynomial(num, shift) {
+
+    if (typeof num.length == 'undefined') {
+      throw num.length + '/' + shift;
+    }
+
+    var _num = function() {
+      var offset = 0;
+      while (offset < num.length && num[offset] == 0) {
+        offset += 1;
+      }
+      var _num = new Array(num.length - offset + shift);
+      for (var i = 0; i < num.length - offset; i += 1) {
+        _num[i] = num[i + offset];
+      }
+      return _num;
+    }();
+
+    var _this = {};
+
+    _this.getAt = function(index) {
+      return _num[index];
+    };
+
+    _this.getLength = function() {
+      return _num.length;
+    };
+
+    _this.multiply = function(e) {
+
+      var num = new Array(_this.getLength() + e.getLength() - 1);
+
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        for (var j = 0; j < e.getLength(); j += 1) {
+          num[i + j] ^= QRMath.gexp(QRMath.glog(_this.getAt(i) ) + QRMath.glog(e.getAt(j) ) );
+        }
+      }
+
+      return qrPolynomial(num, 0);
+    };
+
+    _this.mod = function(e) {
+
+      if (_this.getLength() - e.getLength() < 0) {
+        return _this;
+      }
+
+      var ratio = QRMath.glog(_this.getAt(0) ) - QRMath.glog(e.getAt(0) );
+
+      var num = new Array(_this.getLength() );
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        num[i] = _this.getAt(i);
+      }
+
+      for (var i = 0; i < e.getLength(); i += 1) {
+        num[i] ^= QRMath.gexp(QRMath.glog(e.getAt(i) ) + ratio);
+      }
+
+      // recursive call
+      return qrPolynomial(num, 0).mod(e);
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // QRRSBlock
+  //---------------------------------------------------------------------
+
+  var QRRSBlock = function() {
+
+    var RS_BLOCK_TABLE = [
+
+      // L
+      // M
+      // Q
+      // H
+
+      // 1
+      [1, 26, 19],
+      [1, 26, 16],
+      [1, 26, 13],
+      [1, 26, 9],
+
+      // 2
+      [1, 44, 34],
+      [1, 44, 28],
+      [1, 44, 22],
+      [1, 44, 16],
+
+      // 3
+      [1, 70, 55],
+      [1, 70, 44],
+      [2, 35, 17],
+      [2, 35, 13],
+
+      // 4
+      [1, 100, 80],
+      [2, 50, 32],
+      [2, 50, 24],
+      [4, 25, 9],
+
+      // 5
+      [1, 134, 108],
+      [2, 67, 43],
+      [2, 33, 15, 2, 34, 16],
+      [2, 33, 11, 2, 34, 12],
+
+      // 6
+      [2, 86, 68],
+      [4, 43, 27],
+      [4, 43, 19],
+      [4, 43, 15],
+
+      // 7
+      [2, 98, 78],
+      [4, 49, 31],
+      [2, 32, 14, 4, 33, 15],
+      [4, 39, 13, 1, 40, 14],
+
+      // 8
+      [2, 121, 97],
+      [2, 60, 38, 2, 61, 39],
+      [4, 40, 18, 2, 41, 19],
+      [4, 40, 14, 2, 41, 15],
+
+      // 9
+      [2, 146, 116],
+      [3, 58, 36, 2, 59, 37],
+      [4, 36, 16, 4, 37, 17],
+      [4, 36, 12, 4, 37, 13],
+
+      // 10
+      [2, 86, 68, 2, 87, 69],
+      [4, 69, 43, 1, 70, 44],
+      [6, 43, 19, 2, 44, 20],
+      [6, 43, 15, 2, 44, 16],
+
+      // 11
+      [4, 101, 81],
+      [1, 80, 50, 4, 81, 51],
+      [4, 50, 22, 4, 51, 23],
+      [3, 36, 12, 8, 37, 13],
+
+      // 12
+      [2, 116, 92, 2, 117, 93],
+      [6, 58, 36, 2, 59, 37],
+      [4, 46, 20, 6, 47, 21],
+      [7, 42, 14, 4, 43, 15],
+
+      // 13
+      [4, 133, 107],
+      [8, 59, 37, 1, 60, 38],
+      [8, 44, 20, 4, 45, 21],
+      [12, 33, 11, 4, 34, 12],
+
+      // 14
+      [3, 145, 115, 1, 146, 116],
+      [4, 64, 40, 5, 65, 41],
+      [11, 36, 16, 5, 37, 17],
+      [11, 36, 12, 5, 37, 13],
+
+      // 15
+      [5, 109, 87, 1, 110, 88],
+      [5, 65, 41, 5, 66, 42],
+      [5, 54, 24, 7, 55, 25],
+      [11, 36, 12, 7, 37, 13],
+
+      // 16
+      [5, 122, 98, 1, 123, 99],
+      [7, 73, 45, 3, 74, 46],
+      [15, 43, 19, 2, 44, 20],
+      [3, 45, 15, 13, 46, 16],
+
+      // 17
+      [1, 135, 107, 5, 136, 108],
+      [10, 74, 46, 1, 75, 47],
+      [1, 50, 22, 15, 51, 23],
+      [2, 42, 14, 17, 43, 15],
+
+      // 18
+      [5, 150, 120, 1, 151, 121],
+      [9, 69, 43, 4, 70, 44],
+      [17, 50, 22, 1, 51, 23],
+      [2, 42, 14, 19, 43, 15],
+
+      // 19
+      [3, 141, 113, 4, 142, 114],
+      [3, 70, 44, 11, 71, 45],
+      [17, 47, 21, 4, 48, 22],
+      [9, 39, 13, 16, 40, 14],
+
+      // 20
+      [3, 135, 107, 5, 136, 108],
+      [3, 67, 41, 13, 68, 42],
+      [15, 54, 24, 5, 55, 25],
+      [15, 43, 15, 10, 44, 16],
+
+      // 21
+      [4, 144, 116, 4, 145, 117],
+      [17, 68, 42],
+      [17, 50, 22, 6, 51, 23],
+      [19, 46, 16, 6, 47, 17],
+
+      // 22
+      [2, 139, 111, 7, 140, 112],
+      [17, 74, 46],
+      [7, 54, 24, 16, 55, 25],
+      [34, 37, 13],
+
+      // 23
+      [4, 151, 121, 5, 152, 122],
+      [4, 75, 47, 14, 76, 48],
+      [11, 54, 24, 14, 55, 25],
+      [16, 45, 15, 14, 46, 16],
+
+      // 24
+      [6, 147, 117, 4, 148, 118],
+      [6, 73, 45, 14, 74, 46],
+      [11, 54, 24, 16, 55, 25],
+      [30, 46, 16, 2, 47, 17],
+
+      // 25
+      [8, 132, 106, 4, 133, 107],
+      [8, 75, 47, 13, 76, 48],
+      [7, 54, 24, 22, 55, 25],
+      [22, 45, 15, 13, 46, 16],
+
+      // 26
+      [10, 142, 114, 2, 143, 115],
+      [19, 74, 46, 4, 75, 47],
+      [28, 50, 22, 6, 51, 23],
+      [33, 46, 16, 4, 47, 17],
+
+      // 27
+      [8, 152, 122, 4, 153, 123],
+      [22, 73, 45, 3, 74, 46],
+      [8, 53, 23, 26, 54, 24],
+      [12, 45, 15, 28, 46, 16],
+
+      // 28
+      [3, 147, 117, 10, 148, 118],
+      [3, 73, 45, 23, 74, 46],
+      [4, 54, 24, 31, 55, 25],
+      [11, 45, 15, 31, 46, 16],
+
+      // 29
+      [7, 146, 116, 7, 147, 117],
+      [21, 73, 45, 7, 74, 46],
+      [1, 53, 23, 37, 54, 24],
+      [19, 45, 15, 26, 46, 16],
+
+      // 30
+      [5, 145, 115, 10, 146, 116],
+      [19, 75, 47, 10, 76, 48],
+      [15, 54, 24, 25, 55, 25],
+      [23, 45, 15, 25, 46, 16],
+
+      // 31
+      [13, 145, 115, 3, 146, 116],
+      [2, 74, 46, 29, 75, 47],
+      [42, 54, 24, 1, 55, 25],
+      [23, 45, 15, 28, 46, 16],
+
+      // 32
+      [17, 145, 115],
+      [10, 74, 46, 23, 75, 47],
+      [10, 54, 24, 35, 55, 25],
+      [19, 45, 15, 35, 46, 16],
+
+      // 33
+      [17, 145, 115, 1, 146, 116],
+      [14, 74, 46, 21, 75, 47],
+      [29, 54, 24, 19, 55, 25],
+      [11, 45, 15, 46, 46, 16],
+
+      // 34
+      [13, 145, 115, 6, 146, 116],
+      [14, 74, 46, 23, 75, 47],
+      [44, 54, 24, 7, 55, 25],
+      [59, 46, 16, 1, 47, 17],
+
+      // 35
+      [12, 151, 121, 7, 152, 122],
+      [12, 75, 47, 26, 76, 48],
+      [39, 54, 24, 14, 55, 25],
+      [22, 45, 15, 41, 46, 16],
+
+      // 36
+      [6, 151, 121, 14, 152, 122],
+      [6, 75, 47, 34, 76, 48],
+      [46, 54, 24, 10, 55, 25],
+      [2, 45, 15, 64, 46, 16],
+
+      // 37
+      [17, 152, 122, 4, 153, 123],
+      [29, 74, 46, 14, 75, 47],
+      [49, 54, 24, 10, 55, 25],
+      [24, 45, 15, 46, 46, 16],
+
+      // 38
+      [4, 152, 122, 18, 153, 123],
+      [13, 74, 46, 32, 75, 47],
+      [48, 54, 24, 14, 55, 25],
+      [42, 45, 15, 32, 46, 16],
+
+      // 39
+      [20, 147, 117, 4, 148, 118],
+      [40, 75, 47, 7, 76, 48],
+      [43, 54, 24, 22, 55, 25],
+      [10, 45, 15, 67, 46, 16],
+
+      // 40
+      [19, 148, 118, 6, 149, 119],
+      [18, 75, 47, 31, 76, 48],
+      [34, 54, 24, 34, 55, 25],
+      [20, 45, 15, 61, 46, 16]
+    ];
+
+    var qrRSBlock = function(totalCount, dataCount) {
+      var _this = {};
+      _this.totalCount = totalCount;
+      _this.dataCount = dataCount;
+      return _this;
+    };
+
+    var _this = {};
+
+    var getRsBlockTable = function(typeNumber, errorCorrectionLevel) {
+
+      switch(errorCorrectionLevel) {
+      case QRErrorCorrectionLevel.L :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 0];
+      case QRErrorCorrectionLevel.M :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 1];
+      case QRErrorCorrectionLevel.Q :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 2];
+      case QRErrorCorrectionLevel.H :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 3];
+      default :
+        return undefined;
+      }
+    };
+
+    _this.getRSBlocks = function(typeNumber, errorCorrectionLevel) {
+
+      var rsBlock = getRsBlockTable(typeNumber, errorCorrectionLevel);
+
+      if (typeof rsBlock == 'undefined') {
+        throw 'bad rs block @ typeNumber:' + typeNumber +
+            '/errorCorrectionLevel:' + errorCorrectionLevel;
+      }
+
+      var length = rsBlock.length / 3;
+
+      var list = [];
+
+      for (var i = 0; i < length; i += 1) {
+
+        var count = rsBlock[i * 3 + 0];
+        var totalCount = rsBlock[i * 3 + 1];
+        var dataCount = rsBlock[i * 3 + 2];
+
+        for (var j = 0; j < count; j += 1) {
+          list.push(qrRSBlock(totalCount, dataCount) );
+        }
+      }
+
+      return list;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrBitBuffer
+  //---------------------------------------------------------------------
+
+  var qrBitBuffer = function() {
+
+    var _buffer = [];
+    var _length = 0;
+
+    var _this = {};
+
+    _this.getBuffer = function() {
+      return _buffer;
+    };
+
+    _this.getAt = function(index) {
+      var bufIndex = Math.floor(index / 8);
+      return ( (_buffer[bufIndex] >>> (7 - index % 8) ) & 1) == 1;
+    };
+
+    _this.put = function(num, length) {
+      for (var i = 0; i < length; i += 1) {
+        _this.putBit( ( (num >>> (length - i - 1) ) & 1) == 1);
+      }
+    };
+
+    _this.getLengthInBits = function() {
+      return _length;
+    };
+
+    _this.putBit = function(bit) {
+
+      var bufIndex = Math.floor(_length / 8);
+      if (_buffer.length <= bufIndex) {
+        _buffer.push(0);
+      }
+
+      if (bit) {
+        _buffer[bufIndex] |= (0x80 >>> (_length % 8) );
+      }
+
+      _length += 1;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrNumber
+  //---------------------------------------------------------------------
+
+  var qrNumber = function(data) {
+
+    var _mode = QRMode.MODE_NUMBER;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _data;
+
+      var i = 0;
+
+      while (i + 2 < data.length) {
+        buffer.put(strToNum(data.substring(i, i + 3) ), 10);
+        i += 3;
+      }
+
+      if (i < data.length) {
+        if (data.length - i == 1) {
+          buffer.put(strToNum(data.substring(i, i + 1) ), 4);
+        } else if (data.length - i == 2) {
+          buffer.put(strToNum(data.substring(i, i + 2) ), 7);
+        }
+      }
+    };
+
+    var strToNum = function(s) {
+      var num = 0;
+      for (var i = 0; i < s.length; i += 1) {
+        num = num * 10 + chatToNum(s.charAt(i) );
+      }
+      return num;
+    };
+
+    var chatToNum = function(c) {
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      }
+      throw 'illegal char :' + c;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrAlphaNum
+  //---------------------------------------------------------------------
+
+  var qrAlphaNum = function(data) {
+
+    var _mode = QRMode.MODE_ALPHA_NUM;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var s = _data;
+
+      var i = 0;
+
+      while (i + 1 < s.length) {
+        buffer.put(
+          getCode(s.charAt(i) ) * 45 +
+          getCode(s.charAt(i + 1) ), 11);
+        i += 2;
+      }
+
+      if (i < s.length) {
+        buffer.put(getCode(s.charAt(i) ), 6);
+      }
+    };
+
+    var getCode = function(c) {
+
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      } else if ('A' <= c && c <= 'Z') {
+        return c.charCodeAt(0) - 'A'.charCodeAt(0) + 10;
+      } else {
+        switch (c) {
+        case ' ' : return 36;
+        case '$' : return 37;
+        case '%' : return 38;
+        case '*' : return 39;
+        case '+' : return 40;
+        case '-' : return 41;
+        case '.' : return 42;
+        case '/' : return 43;
+        case ':' : return 44;
+        default :
+          throw 'illegal char :' + c;
+        }
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qr8BitByte
+  //---------------------------------------------------------------------
+
+  var qr8BitByte = function(data) {
+
+    var _mode = QRMode.MODE_8BIT_BYTE;
+    var _data = data;
+    var _bytes = qrcode.stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _bytes.length;
+    };
+
+    _this.write = function(buffer) {
+      for (var i = 0; i < _bytes.length; i += 1) {
+        buffer.put(_bytes[i], 8);
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrKanji
+  //---------------------------------------------------------------------
+
+  var qrKanji = function(data) {
+
+    var _mode = QRMode.MODE_KANJI;
+    var _data = data;
+
+    var stringToBytes = qrcode.stringToBytesFuncs['SJIS'];
+    if (!stringToBytes) {
+      throw 'sjis not supported.';
+    }
+    !function(c, code) {
+      // self test for sjis support.
+      var test = stringToBytes(c);
+      if (test.length != 2 || ( (test[0] << 8) | test[1]) != code) {
+        throw 'sjis not supported.';
+      }
+    }('\u53cb', 0x9746);
+
+    var _bytes = stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return ~~(_bytes.length / 2);
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _bytes;
+
+      var i = 0;
+
+      while (i + 1 < data.length) {
+
+        var c = ( (0xff & data[i]) << 8) | (0xff & data[i + 1]);
+
+        if (0x8140 <= c && c <= 0x9FFC) {
+          c -= 0x8140;
+        } else if (0xE040 <= c && c <= 0xEBBF) {
+          c -= 0xC140;
+        } else {
+          throw 'illegal char at ' + (i + 1) + '/' + c;
+        }
+
+        c = ( (c >>> 8) & 0xff) * 0xC0 + (c & 0xff);
+
+        buffer.put(c, 13);
+
+        i += 2;
+      }
+
+      if (i < data.length) {
+        throw 'illegal char at ' + (i + 1);
+      }
+    };
+
+    return _this;
+  };
+
+  //=====================================================================
+  // GIF Support etc.
+  //
+
+  //---------------------------------------------------------------------
+  // byteArrayOutputStream
+  //---------------------------------------------------------------------
+
+  var byteArrayOutputStream = function() {
+
+    var _bytes = [];
+
+    var _this = {};
+
+    _this.writeByte = function(b) {
+      _bytes.push(b & 0xff);
+    };
+
+    _this.writeShort = function(i) {
+      _this.writeByte(i);
+      _this.writeByte(i >>> 8);
+    };
+
+    _this.writeBytes = function(b, off, len) {
+      off = off || 0;
+      len = len || b.length;
+      for (var i = 0; i < len; i += 1) {
+        _this.writeByte(b[i + off]);
+      }
+    };
+
+    _this.writeString = function(s) {
+      for (var i = 0; i < s.length; i += 1) {
+        _this.writeByte(s.charCodeAt(i) );
+      }
+    };
+
+    _this.toByteArray = function() {
+      return _bytes;
+    };
+
+    _this.toString = function() {
+      var s = '';
+      s += '[';
+      for (var i = 0; i < _bytes.length; i += 1) {
+        if (i > 0) {
+          s += ',';
+        }
+        s += _bytes[i];
+      }
+      s += ']';
+      return s;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64EncodeOutputStream
+  //---------------------------------------------------------------------
+
+  var base64EncodeOutputStream = function() {
+
+    var _buffer = 0;
+    var _buflen = 0;
+    var _length = 0;
+    var _base64 = '';
+
+    var _this = {};
+
+    var writeEncoded = function(b) {
+      _base64 += String.fromCharCode(encode(b & 0x3f) );
+    };
+
+    var encode = function(n) {
+      if (n < 0) {
+        // error.
+      } else if (n < 26) {
+        return 0x41 + n;
+      } else if (n < 52) {
+        return 0x61 + (n - 26);
+      } else if (n < 62) {
+        return 0x30 + (n - 52);
+      } else if (n == 62) {
+        return 0x2b;
+      } else if (n == 63) {
+        return 0x2f;
+      }
+      throw 'n:' + n;
+    };
+
+    _this.writeByte = function(n) {
+
+      _buffer = (_buffer << 8) | (n & 0xff);
+      _buflen += 8;
+      _length += 1;
+
+      while (_buflen >= 6) {
+        writeEncoded(_buffer >>> (_buflen - 6) );
+        _buflen -= 6;
+      }
+    };
+
+    _this.flush = function() {
+
+      if (_buflen > 0) {
+        writeEncoded(_buffer << (6 - _buflen) );
+        _buffer = 0;
+        _buflen = 0;
+      }
+
+      if (_length % 3 != 0) {
+        // padding
+        var padlen = 3 - _length % 3;
+        for (var i = 0; i < padlen; i += 1) {
+          _base64 += '=';
+        }
+      }
+    };
+
+    _this.toString = function() {
+      return _base64;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64DecodeInputStream
+  //---------------------------------------------------------------------
+
+  var base64DecodeInputStream = function(str) {
+
+    var _str = str;
+    var _pos = 0;
+    var _buffer = 0;
+    var _buflen = 0;
+
+    var _this = {};
+
+    _this.read = function() {
+
+      while (_buflen < 8) {
+
+        if (_pos >= _str.length) {
+          if (_buflen == 0) {
+            return -1;
+          }
+          throw 'unexpected end of file./' + _buflen;
+        }
+
+        var c = _str.charAt(_pos);
+        _pos += 1;
+
+        if (c == '=') {
+          _buflen = 0;
+          return -1;
+        } else if (c.match(/^\s$/) ) {
+          // ignore if whitespace.
+          continue;
+        }
+
+        _buffer = (_buffer << 6) | decode(c.charCodeAt(0) );
+        _buflen += 6;
+      }
+
+      var n = (_buffer >>> (_buflen - 8) ) & 0xff;
+      _buflen -= 8;
+      return n;
+    };
+
+    var decode = function(c) {
+      if (0x41 <= c && c <= 0x5a) {
+        return c - 0x41;
+      } else if (0x61 <= c && c <= 0x7a) {
+        return c - 0x61 + 26;
+      } else if (0x30 <= c && c <= 0x39) {
+        return c - 0x30 + 52;
+      } else if (c == 0x2b) {
+        return 62;
+      } else if (c == 0x2f) {
+        return 63;
+      } else {
+        throw 'c:' + c;
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // gifImage (B/W)
+  //---------------------------------------------------------------------
+
+  var gifImage = function(width, height) {
+
+    var _width = width;
+    var _height = height;
+    var _data = new Array(width * height);
+
+    var _this = {};
+
+    _this.setPixel = function(x, y, pixel) {
+      _data[y * _width + x] = pixel;
+    };
+
+    _this.write = function(out) {
+
+      //---------------------------------
+      // GIF Signature
+
+      out.writeString('GIF87a');
+
+      //---------------------------------
+      // Screen Descriptor
+
+      out.writeShort(_width);
+      out.writeShort(_height);
+
+      out.writeByte(0x80); // 2bit
+      out.writeByte(0);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Global Color Map
+
+      // black
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+
+      // white
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+
+      //---------------------------------
+      // Image Descriptor
+
+      out.writeString(',');
+      out.writeShort(0);
+      out.writeShort(0);
+      out.writeShort(_width);
+      out.writeShort(_height);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Local Color Map
+
+      //---------------------------------
+      // Raster Data
+
+      var lzwMinCodeSize = 2;
+      var raster = getLZWRaster(lzwMinCodeSize);
+
+      out.writeByte(lzwMinCodeSize);
+
+      var offset = 0;
+
+      while (raster.length - offset > 255) {
+        out.writeByte(255);
+        out.writeBytes(raster, offset, 255);
+        offset += 255;
+      }
+
+      out.writeByte(raster.length - offset);
+      out.writeBytes(raster, offset, raster.length - offset);
+      out.writeByte(0x00);
+
+      //---------------------------------
+      // GIF Terminator
+      out.writeString(';');
+    };
+
+    var bitOutputStream = function(out) {
+
+      var _out = out;
+      var _bitLength = 0;
+      var _bitBuffer = 0;
+
+      var _this = {};
+
+      _this.write = function(data, length) {
+
+        if ( (data >>> length) != 0) {
+          throw 'length over';
+        }
+
+        while (_bitLength + length >= 8) {
+          _out.writeByte(0xff & ( (data << _bitLength) | _bitBuffer) );
+          length -= (8 - _bitLength);
+          data >>>= (8 - _bitLength);
+          _bitBuffer = 0;
+          _bitLength = 0;
+        }
+
+        _bitBuffer = (data << _bitLength) | _bitBuffer;
+        _bitLength = _bitLength + length;
+      };
+
+      _this.flush = function() {
+        if (_bitLength > 0) {
+          _out.writeByte(_bitBuffer);
+        }
+      };
+
+      return _this;
+    };
+
+    var getLZWRaster = function(lzwMinCodeSize) {
+
+      var clearCode = 1 << lzwMinCodeSize;
+      var endCode = (1 << lzwMinCodeSize) + 1;
+      var bitLength = lzwMinCodeSize + 1;
+
+      // Setup LZWTable
+      var table = lzwTable();
+
+      for (var i = 0; i < clearCode; i += 1) {
+        table.add(String.fromCharCode(i) );
+      }
+      table.add(String.fromCharCode(clearCode) );
+      table.add(String.fromCharCode(endCode) );
+
+      var byteOut = byteArrayOutputStream();
+      var bitOut = bitOutputStream(byteOut);
+
+      // clear code
+      bitOut.write(clearCode, bitLength);
+
+      var dataIndex = 0;
+
+      var s = String.fromCharCode(_data[dataIndex]);
+      dataIndex += 1;
+
+      while (dataIndex < _data.length) {
+
+        var c = String.fromCharCode(_data[dataIndex]);
+        dataIndex += 1;
+
+        if (table.contains(s + c) ) {
+
+          s = s + c;
+
+        } else {
+
+          bitOut.write(table.indexOf(s), bitLength);
+
+          if (table.size() < 0xfff) {
+
+            if (table.size() == (1 << bitLength) ) {
+              bitLength += 1;
+            }
+
+            table.add(s + c);
+          }
+
+          s = c;
+        }
+      }
+
+      bitOut.write(table.indexOf(s), bitLength);
+
+      // end code
+      bitOut.write(endCode, bitLength);
+
+      bitOut.flush();
+
+      return byteOut.toByteArray();
+    };
+
+    var lzwTable = function() {
+
+      var _map = {};
+      var _size = 0;
+
+      var _this = {};
+
+      _this.add = function(key) {
+        if (_this.contains(key) ) {
+          throw 'dup key:' + key;
+        }
+        _map[key] = _size;
+        _size += 1;
+      };
+
+      _this.size = function() {
+        return _size;
+      };
+
+      _this.indexOf = function(key) {
+        return _map[key];
+      };
+
+      _this.contains = function(key) {
+        return typeof _map[key] != 'undefined';
+      };
+
+      return _this;
+    };
+
+    return _this;
+  };
+
+  var createDataURL = function(width, height, getPixel) {
+    var gif = gifImage(width, height);
+    for (var y = 0; y < height; y += 1) {
+      for (var x = 0; x < width; x += 1) {
+        gif.setPixel(x, y, getPixel(x, y) );
+      }
+    }
+
+    var b = byteArrayOutputStream();
+    gif.write(b);
+
+    var base64 = base64EncodeOutputStream();
+    var bytes = b.toByteArray();
+    for (var i = 0; i < bytes.length; i += 1) {
+      base64.writeByte(bytes[i]);
+    }
+    base64.flush();
+
+    return 'data:image/gif;base64,' + base64;
+  };
+
+  //---------------------------------------------------------------------
+  // returns qrcode function.
+
+  return qrcode;
+}();
+
+// multibyte support
+!function() {
+
+  qrcode.stringToBytesFuncs['UTF-8'] = function(s) {
+    // http://stackoverflow.com/questions/18729405/how-to-convert-utf8-string-to-byte-array
+    function toUTF8Array(str) {
+      var utf8 = [];
+      for (var i=0; i < str.length; i++) {
+        var charcode = str.charCodeAt(i);
+        if (charcode < 0x80) utf8.push(charcode);
+        else if (charcode < 0x800) {
+          utf8.push(0xc0 | (charcode >> 6),
+              0x80 | (charcode & 0x3f));
+        }
+        else if (charcode < 0xd800 || charcode >= 0xe000) {
+          utf8.push(0xe0 | (charcode >> 12),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+        // surrogate pair
+        else {
+          i++;
+          // UTF-16 encodes 0x10000-0x10FFFF by
+          // subtracting 0x10000 and splitting the
+          // 20 bits of 0x0-0xFFFFF into two halves
+          charcode = 0x10000 + (((charcode & 0x3ff)<<10)
+            | (str.charCodeAt(i) & 0x3ff));
+          utf8.push(0xf0 | (charcode >>18),
+              0x80 | ((charcode>>12) & 0x3f),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+      }
+      return utf8;
+    }
+    return toUTF8Array(s);
+  };
+
+}();
+
+(function (factory) {
+  if (typeof define === 'function' && define.amd) {
+      define([], factory);
+  } else if (typeof exports === 'object') {
+      module.exports = factory();
+  }
+}(function () {
+    return qrcode;
+}));
+</script>
+<script>
+/* ===== 寄信小幫手（2026-10-18）：在安全網頁上把 QR Code 圖片放進剪貼簿，再開啟 Outlook 新郵件，只要按 Ctrl+V 即可貼上 ===== */
+(function(){
+  var H={}; location.hash.slice(1).split('&').forEach(function(kv){ var i=kv.indexOf('='); if(i>0){ var v=kv.slice(i+1); try{ v=decodeURIComponent(v); }catch(e){} H[kv.slice(0,i)]=v; } });
+  if(!H.mail) return; window.__TBM_MAIL_MODE=true;
+  var link=H.mail, subj=H.s||'', body=H.b||'';
+  document.title='寄送病審回覆 QR Code'; document.querySelector('h1').textContent='寄送診療醫師回覆 QR Code';
+  var box=document.getElementById('box'), sub=document.getElementById('mt'); sub.textContent=subj; var nt=document.querySelector('.wrap > .note'); if(nt) nt.textContent='此頁只在您的電腦上產生 QR Code 圖片，不會傳送任何資料。';
+  var q=qrcode(0,'M'); if(qrcode.stringToBytesFuncs&&qrcode.stringToBytesFuncs['UTF-8']) qrcode.stringToBytes=qrcode.stringToBytesFuncs['UTF-8']; q.addData(link,'Byte'); q.make();
+  var cv=document.createElement('canvas'), n=q.getModuleCount(), cell=8, m=4*cell; cv.width=cv.height=n*cell+2*m; var x=cv.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,cv.width,cv.height); x.fillStyle='#000';
+  for(var r=0;r<n;r++) for(var c=0;c<n;c++) if(q.isDark(r,c)) x.fillRect(m+c*cell,m+r*cell,cell,cell);
+  box.innerHTML='<img id="qi" alt="回覆 QR Code" style="width:260px;max-width:100%;justify-self:center;image-rendering:pixelated">'+
+    '<button class="b pri" id="go">📋 複製 QR Code 並開啟 Outlook 新郵件</button><div class="msg" id="msg"></div>'+
+    '<div class="note">按下後 QR Code 圖片會放進剪貼簿，並開啟 Outlook 網頁版新郵件（主旨、內容已寫好）。在信中標示的位置按 <b>Ctrl+V</b>（Mac：⌘+V）即可貼上 QR Code，填入醫師信箱後寄出。</div>';
+  document.getElementById('qi').src=cv.toDataURL('image/png');
+  var url='https://outlook.cloud.microsoft/mail/deeplink/compose?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
+  document.getElementById('go').onclick=function(){ var msg=document.getElementById('msg');
+    cv.toBlob(function(bl){ var go=function(ok){ msg.textContent=ok?'✅ QR Code 已複製，正在開啟 Outlook…':'無法自動複製圖片，請在上方 QR Code 按右鍵（手機長按）→ 複製影像，再到信中貼上。'; setTimeout(function(){ location.href=url; },ok?600:2500); };
+      try{ navigator.clipboard.write([new ClipboardItem({'image/png':bl})]).then(function(){ go(true); },function(){ go(false); }); }catch(e){ go(false); } },'image/png'); };
+})();
+</script>
+<script>
+/* ===== 診療醫師線上回覆病審單（2026-10-18）：只能填最下面的回覆意見、簽章、日期、聯絡電話，送出後直接回傳院內系統 ===== */
+(function(){
+  var H={}; location.hash.slice(1).split('&').forEach(function(kv){ var i=kv.indexOf('='); if(i>0){ var v=kv.slice(i+1); try{ v=decodeURIComponent(v); }catch(e){} H[kv.slice(0,i)]=v; } });
+  if(!H.rp){ try{ var sv=JSON.parse(sessionStorage.getItem('tbm-rp-cur')||'null'); if(sv&&/^#rpx=/.test(location.hash)) H=sv; }catch(e){} }
+  if(!H.rp) return;
+  try{ sessionStorage.setItem('tbm-rp-cur',JSON.stringify(H)); history.replaceState(null,'',location.pathname+'#rpx='+encodeURIComponent(H.rp)); }catch(e){}
+  window.__TBM_RP_MODE=true;
+  var ID=H.rp, KEY=H.key||'', PROJ=H.p||'tb-sign-in-sheet', COL=H.c||'tbm_checkin';
+  var FS='https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(PROJ)+'/databases/(default)/documents';
+  function sha256(s){ var K=[1116352408,1899447441,3049323471,3921009573,961987163,1508970993,2453635748,2870763221,3624381080,310598401,607225278,1426881987,1925078388,2162078206,2614888103,3248222580,3835390401,4022224774,264347078,604807628,770255983,1249150122,1555081692,1996064986,2554220882,2821834349,2952996808,3210313671,3336571891,3584528711,113926993,338241895,666307205,773529912,1294757372,1396182291,1695183700,1986661051,2177026350,2456956037,2730485921,2820302411,3259730800,3345764771,3516065817,3600352804,4094571909,275423344,430227734,506948616,659060556,883997877,958139571,1322822218,1537002063,1747873779,1955562222,2024104815,2227730452,2361852424,2428436474,2756734187,3204031479,3329325298];
+    var b=unescape(encodeURIComponent(s)), l=b.length, w=[], i, H=[1779033703,3144134277,1013904242,2773480762,1359893119,2600822924,528734635,1541459225];
+    for(i=0;i<l;i++) w[i>>2]|=b.charCodeAt(i)<<(24-8*(i%4)); w[l>>2]|=0x80<<(24-8*(l%4)); var n=((l+8)>>6)+1; w[n*16-1]=l*8;
+    function r(x,k){ return (x>>>k)|(x<<(32-k)); }
+    for(var j=0;j<n*16;j+=16){ var a=H.slice(), W=[];
+      for(i=0;i<64;i++){ if(i<16) W[i]=w[j+i]|0; else { var s0=r(W[i-15],7)^r(W[i-15],18)^(W[i-15]>>>3), s1=r(W[i-2],17)^r(W[i-2],19)^(W[i-2]>>>10); W[i]=(W[i-16]+s0+W[i-7]+s1)|0; }
+        var t1=(a[7]+(r(a[4],6)^r(a[4],11)^r(a[4],25))+((a[4]&a[5])^(~a[4]&a[6]))+K[i]+W[i])|0, t2=((r(a[0],2)^r(a[0],13)^r(a[0],22))+((a[0]&a[1])^(a[0]&a[2])^(a[1]&a[2])))|0;
+        a=[(t1+t2)|0,a[0],a[1],a[2],(a[3]+t1)|0,a[4],a[5],a[6]]; }
+      for(i=0;i<8;i++) H[i]=(H[i]+a[i])|0; }
+    return H.map(function(x){ return ('00000000'+(x>>>0).toString(16)).slice(-8); }).join(''); }
+  function rnd(n){ var a=new Uint8Array(n); crypto.getRandomValues(a); return [].map.call(a,function(x){ return ('0'+x.toString(16)).slice(-2); }).join(''); }
+  function ks(key,nonce,len){ var out=new Uint8Array(len), j=0, o=0; while(o<len){ var h=sha256(key+'|'+nonce+'|'+(j++)); for(var i=0;i<64&&o<len;i+=2) out[o++]=parseInt(h.substr(i,2),16); } return out; }
+  function b64(u){ var s=''; for(var i=0;i<u.length;i+=8192) s+=String.fromCharCode.apply(null,u.subarray(i,i+8192)); return btoa(s); }
+  function unb64(t){ var s=atob(t), u=new Uint8Array(s.length); for(var i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; }
+  function enc(obj){ var n=rnd(12), pt=new TextEncoder().encode(JSON.stringify(obj)), k=ks(KEY,n,pt.length); for(var i=0;i<pt.length;i++) pt[i]^=k[i]; var c=b64(pt); return JSON.stringify({n:n,c:c,g:sha256(KEY+'|tag|'+n+'|'+c).slice(0,24)}); }
+  function dec(str){ var o=JSON.parse(str); if(sha256(KEY+'|tag|'+o.n+'|'+o.c).slice(0,24)!==o.g) throw new Error('bad'); var u=unb64(o.c), k=ks(KEY,o.n,u.length); for(var i=0;i<u.length;i++) u[i]^=k[i]; return JSON.parse(new TextDecoder().decode(u)); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function $(i){ return document.getElementById(i); }
+  document.title='病審單回覆';
+  document.querySelector('h1').textContent='結核病病審單　診療醫師回覆';
+  var sub=$('mt'), box=$('box'), note=document.querySelector('.wrap > .note'); if(note) note.textContent='此頁內容經加密傳送；送出回覆後，院內系統收到即自動刪除雲端資料。';
+  var css=document.createElement('style'); css.textContent='.wrap{max-width:820px}.sheetimg{width:100%;border:1px solid var(--line);border-radius:8px;background:#fff}.rp label.o{display:flex;gap:8px;align-items:flex-start;font-size:16px;line-height:1.6;margin:6px 0}.rp label.o input{width:20px;height:20px;flex:none;margin-top:3px}.rp textarea,.rp input[type=tel],.rp input[type=date]{font:inherit;font-size:17px;width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px}.rp .lab{font-size:14px;color:var(--sub);margin-top:10px}.rp .stb{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.rp .stb img{max-height:70px;background:#fff;border:1px solid #f0d4d0;border-radius:6px;padding:4px}.lock{background:#f8fafc;border:1px dashed var(--line);border-radius:10px;padding:10px;font-size:15px;white-space:pre-wrap;line-height:1.7}';
+  document.head.appendChild(css);
+  box.innerHTML='<div class="big">讀取病審單中…</div>';
+  var X=null, useStamp=false, P=null;
+  fetch(FS+'/'+encodeURIComponent(COL)+'/RPS_'+encodeURIComponent(ID)).then(function(r){ if(r.status===404) return null; if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(d){ if(!d){ box.innerHTML='<div class="big">此回覆單已完成或已失效</div><div class="msg">若尚未回覆，請聯絡結核病個案管理師重新寄送。</div>'; return; } X=dec(d.fields.i.stringValue); if(X.exp&&Date.now()>X.exp){ box.innerHTML='<div class="big">此回覆 QR Code 已逾期</div><div class="msg">回覆期限為 '+rocD(X.exp)+'，請聯絡結核病個案管理師重新產生（電話 02-28712121 轉 83536 或 83677）。</div>'; return; } render(); })
+    .catch(function(e){ box.innerHTML='<div class="big">讀取失敗</div><div class="msg err">'+esc(e.message||'請確認網路')+'</div>'; });
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function rocD(t){ var d=new Date(t); return (d.getFullYear()-1911)+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'; }
+  function render(){ sub.textContent=(X.scope||'')+' 第 '+X.n+' 案　診療醫師：'+(X.doc||'')+(X.exp?'　｜請於 '+rocD(X.exp)+' 前回覆':'');
+    var dv=''; if(X.dflt) dv=(X.dflt.y+1911)+'-'+pad2(X.dflt.m)+'-'+pad2(X.dflt.d);
+    box.innerHTML=(X.img?'<div class="lab" style="margin-top:0">病審單內容（僅供檢視，不可修改）</div><img class="sheetimg" alt="病審單內容" src="'+X.img+'">':'<div class="lock">'+esc(X.text||'')+'</div>')+
+      '<div class="rp"><div class="big" style="margin-top:8px"><b>回覆意見</b>（以下由診療醫師填寫）</div>'+
+      '<label class="o"><input type="radio" name="ag" id="a1" '+(X.a2?'':'checked')+'>同意上開審查建議，並據以診治病患。</label>'+
+      '<label class="o"><input type="radio" name="ag" id="a2" '+(X.a2?'checked':'')+'>不同意上開審查建議，不同意之理由如下：</label>'+
+      '<textarea id="why" rows="2" placeholder="不同意時請填寫理由" '+(X.a2?'':'disabled')+'>'+esc([X.a2a,X.a2b].filter(Boolean).join(''))+'</textarea>'+
+      '<div class="lab">診療醫師簽章</div>'+(X.stamp?'<div class="stb"><button class="b sec" type="button" id="useSt" style="width:auto;padding:10px 14px">🔴 使用我的電子印章</button><img id="stImg2" alt="電子印章" src="'+X.stamp+'" hidden></div>':'')+
+      '<div class="note" id="padTip2">請用手指或滑鼠在框內簽名。</div><div id="padR"></div><div class="row" style="margin-top:6px"><button class="b sec" type="button" id="clr2">重簽</button></div>'+
+      '<div class="lab">回覆日期（點選日曆）</div><input type="date" id="dt" value="'+dv+'">'+(X.dflt?'<div class="note">您已於會議當日簽到，已自動帶入當日日期。</div>':'')+
+      '<div class="lab">聯絡電話</div><input type="tel" id="tel" value="'+esc(X.tel||'')+'" placeholder="例如：分機 12345">'+
+      '<div class="msg" id="rmsg"></div><button class="b pri" type="button" id="go2" style="margin-top:8px">送出回覆</button></div>';
+    P=pad($('padR'));
+    $('a1').onchange=$('a2').onchange=function(){ $('why').disabled=!$('a2').checked; if($('a2').checked) $('why').focus(); };
+    $('clr2').onclick=function(){ P.clear(); useStamp=false; var si=$('stImg2'); if(si) si.hidden=true; $('padR').style.display=''; };
+    if($('useSt')) $('useSt').onclick=function(){ useStamp=true; $('stImg2').hidden=false; $('padR').style.display='none'; $('padTip2').textContent='已選擇電子印章（按「重簽」可改為手寫）。'; };
+    $('go2').onclick=submit; }
+  function pad(holder){ holder.className='pad'; holder.innerHTML='<canvas></canvas><div class="base"></div><div class="ph">請在此簽名</div>';
+    var cv=holder.querySelector('canvas'), ctx=cv.getContext('2d'), ph=holder.querySelector('.ph'), drawn=false, last=null;
+    function size(){ var r=cv.getBoundingClientRect(), k=window.devicePixelRatio||1; cv.width=r.width*k; cv.height=r.height*k; ctx.setTransform(k,0,0,k,0,0); ctx.lineWidth=2.6; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#0b2a6b'; }
+    size(); function pt(e){ var r=cv.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; }
+    cv.addEventListener('pointerdown',function(e){ e.preventDefault(); cv.setPointerCapture(e.pointerId); last=pt(e); drawn=true; ph.hidden=true; });
+    cv.addEventListener('pointermove',function(e){ if(!last) return; var p=pt(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; });
+    cv.addEventListener('pointerup',function(){ last=null; }); cv.addEventListener('pointercancel',function(){ last=null; });
+    return { clear:function(){ ctx.clearRect(0,0,cv.width,cv.height); drawn=false; ph.hidden=false; }, has:function(){ return drawn; },
+      png:function(){ if(!drawn) return null; var d=ctx.getImageData(0,0,cv.width,cv.height).data, w=cv.width, h=cv.height, x0=w,y0=h,x1=-1,y1=-1;
+        for(var y=0;y<h;y+=2) for(var x=0;x<w;x+=2){ if(d[(y*w+x)*4+3]>20){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } }
+        if(x1<0) return null; x0=Math.max(0,x0-8); y0=Math.max(0,y0-8); x1=Math.min(w,x1+8); y1=Math.min(h,y1+8);
+        var sw=x1-x0, sh=y1-y0, sc=Math.min(1,600/sw,200/sh), o=document.createElement('canvas'); o.width=Math.max(1,Math.round(sw*sc)); o.height=Math.max(1,Math.round(sh*sc));
+        o.getContext('2d').drawImage(cv,x0,y0,sw,sh,0,0,o.width,o.height); return o.toDataURL('image/png'); } }; }
+  function submit(){ var m=$('rmsg'); m.className='msg err';
+    var a2=$('a2').checked, why=$('why').value.trim(), sig=useStamp?X.stamp:P.png(), dt=$('dt').value, tel=$('tel').value.trim();
+    if(a2&&!why){ m.textContent='不同意時請填寫理由。'; $('why').focus(); return; }
+    if(!sig){ m.textContent='請在「診療醫師簽章」框內簽名'+(X.stamp?'，或使用電子印章':'')+'。'; return; }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)){ m.textContent='請點選回覆日期。'; $('dt').focus(); return; }
+    var p=dt.split('-'), now=new Date(), at=(now.getFullYear()-1911)+'/'+pad2(now.getMonth()+1)+'/'+pad2(now.getDate())+' '+pad2(now.getHours())+':'+pad2(now.getMinutes());
+    var o={a1:!a2,a2:a2,a2a:a2?why.slice(0,40):'',a2b:a2?why.slice(40,80):'',y2:String(+p[0]-1911),m2:String(+p[1]),d2:String(+p[2]),tel:tel,sig:sig,at:at};
+    var b=$('go2'); b.disabled=true; b.textContent='送出中…'; m.className='msg'; m.textContent='';
+    var t=Date.now();
+    fetch(FS+'/'+encodeURIComponent(COL)+'?documentId=RRP_'+ID+'_'+t,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{m:{stringValue:'RR'+ID},h:{stringValue:''},s:{stringValue:'rr'},t:{integerValue:String(t)},d:{stringValue:'doc'},i:{stringValue:enc(o)}}})})
+      .then(function(r){ if(!r.ok) return r.text().then(function(tx){ throw new Error(r.status+' '+tx.slice(0,80)); });
+        box.innerHTML='<div class="done" id="dIcon">⏳</div><div class="big" style="text-align:center" id="dT">已送出，等待院內系統確認…</div><div class="msg" style="text-align:center;color:var(--sub)">'+(a2?'不同意上開審查建議':'同意上開審查建議')+'　'+(+p[0]-1911)+'年'+(+p[1])+'月'+(+p[2])+'日</div><div class="msg" style="text-align:center" id="dM"></div>';
+        var tries=0; (function chk(){ fetch(FS+'/'+encodeURIComponent(COL)+'/RPS_'+encodeURIComponent(ID),{cache:'no-store'}).then(function(r){ return r.status; },function(){ return 0; }).then(function(sc){
+          if(sc===404){ $('dIcon').textContent='✅'; $('dT').textContent='簽名回覆成功，院內系統已收到'; $('dM').textContent='不需回信，可以關閉此頁。謝謝！'; return; }
+          if(++tries<30){ setTimeout(chk,4000); return; }
+          $('dIcon').textContent='📨'; $('dT').textContent='已送出，院內系統尚未確認'; $('dM').innerHTML='您的簽名回覆已安全送出並保存，院內電腦開啟後會自動收到。<br>如需確認，請聯絡結核病個案管理師（02-28712121 轉 83536 或 83677）。'; }); })(); })
+      .catch(function(e){ b.disabled=false; b.textContent='送出回覆'; m.className='msg err'; m.innerHTML='❌ <b>簽名回覆送出失敗</b>（'+esc(e.message||'網路連線異常')+'）。<br>您的填寫內容仍保留在畫面上，請確認手機網路後再按一次「送出回覆」；若持續失敗，請聯絡結核病個案管理師（02-28712121 轉 83536 或 83677）。'; }); }
+})();
+</script>
+<script>
+/* ===== 手機即時會議紀錄（2026-10-18）：掃會議紀錄 QR Code → 點欄位 → 錄音轉文字／打字 → 加密即時回傳院內系統 ===== */
+(function(){
+  var H={}; location.hash.slice(1).split('&').forEach(function(kv){ var i=kv.indexOf('='); if(i>0){ var v=kv.slice(i+1); try{ v=decodeURIComponent(v); }catch(e){} H[kv.slice(0,i)]=v; } });
+  if(!H.min){ try{ var sv=JSON.parse(sessionStorage.getItem('tbm-min-cur')||'null'); if(sv&&/^#minx=/.test(location.hash)) H=sv; }catch(e){} }
+  if(!H.min) return;
+  try{ sessionStorage.setItem('tbm-min-cur',JSON.stringify(H)); history.replaceState(null,'',location.pathname+'#minx='+encodeURIComponent(H.min)); }catch(e){}
+  window.__TBM_MIN_MODE=true;
+  var ID=H.min, KEY=H.key||'', PROJ=H.p||'tb-sign-in-sheet', COL=H.c||'tbm_checkin';
+  var BASE='https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(PROJ)+'/databases/(default)/documents';
+  function sha256(s){ var K=[1116352408,1899447441,3049323471,3921009573,961987163,1508970993,2453635748,2870763221,3624381080,310598401,607225278,1426881987,1925078388,2162078206,2614888103,3248222580,3835390401,4022224774,264347078,604807628,770255983,1249150122,1555081692,1996064986,2554220882,2821834349,2952996808,3210313671,3336571891,3584528711,113926993,338241895,666307205,773529912,1294757372,1396182291,1695183700,1986661051,2177026350,2456956037,2730485921,2820302411,3259730800,3345764771,3516065817,3600352804,4094571909,275423344,430227734,506948616,659060556,883997877,958139571,1322822218,1537002063,1747873779,1955562222,2024104815,2227730452,2361852424,2428436474,2756734187,3204031479,3329325298];
+    var b=unescape(encodeURIComponent(s)), l=b.length, w=[], i, H=[1779033703,3144134277,1013904242,2773480762,1359893119,2600822924,528734635,1541459225];
+    for(i=0;i<l;i++) w[i>>2]|=b.charCodeAt(i)<<(24-8*(i%4)); w[l>>2]|=0x80<<(24-8*(l%4)); var n=((l+8)>>6)+1; w[n*16-1]=l*8;
+    function r(x,k){ return (x>>>k)|(x<<(32-k)); }
+    for(var j=0;j<n*16;j+=16){ var a=H.slice(), W=[];
+      for(i=0;i<64;i++){ if(i<16) W[i]=w[j+i]|0; else { var s0=r(W[i-15],7)^r(W[i-15],18)^(W[i-15]>>>3), s1=r(W[i-2],17)^r(W[i-2],19)^(W[i-2]>>>10); W[i]=(W[i-16]+s0+W[i-7]+s1)|0; }
+        var t1=(a[7]+(r(a[4],6)^r(a[4],11)^r(a[4],25))+((a[4]&a[5])^(~a[4]&a[6]))+K[i]+W[i])|0, t2=((r(a[0],2)^r(a[0],13)^r(a[0],22))+((a[0]&a[1])^(a[0]&a[2])^(a[1]&a[2])))|0;
+        a=[(t1+t2)|0,a[0],a[1],a[2],(a[3]+t1)|0,a[4],a[5],a[6]]; }
+      for(i=0;i<8;i++) H[i]=(H[i]+a[i])|0; }
+    return H.map(function(x){ return ('00000000'+(x>>>0).toString(16)).slice(-8); }).join(''); }
+  function rnd(n){ var a=new Uint8Array(n); crypto.getRandomValues(a); return [].map.call(a,function(x){ return ('0'+x.toString(16)).slice(-2); }).join(''); }
+  function ks(key,nonce,len){ var out=new Uint8Array(len), j=0, o=0; while(o<len){ var h=sha256(key+'|'+nonce+'|'+(j++)); for(var i=0;i<64&&o<len;i+=2) out[o++]=parseInt(h.substr(i,2),16); } return out; }
+  function b64(u){ var s=''; for(var i=0;i<u.length;i+=8192) s+=String.fromCharCode.apply(null,u.subarray(i,i+8192)); return btoa(s); }
+  function unb64(t){ var s=atob(t), u=new Uint8Array(s.length); for(var i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; }
+  function enc(obj){ var n=rnd(12), pt=new TextEncoder().encode(JSON.stringify(obj)), k=ks(KEY,n,pt.length); for(var i=0;i<pt.length;i++) pt[i]^=k[i]; var c=b64(pt); return JSON.stringify({n:n,c:c,g:sha256(KEY+'|tag|'+n+'|'+c).slice(0,24)}); }
+  function dec(str){ var o=JSON.parse(str); if(sha256(KEY+'|tag|'+o.n+'|'+o.c).slice(0,24)!==o.g) throw new Error('bad'); var u=unb64(o.c), k=ks(KEY,o.n,u.length); for(var i=0;i<u.length;i++) u[i]^=k[i]; return JSON.parse(new TextDecoder().decode(u)); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  document.title='即時會議紀錄';
+  var css=document.createElement('style'); css.textContent='.mf{display:grid;gap:4px}.mf label{font-size:13px;color:var(--sub)}.mf textarea{font:inherit;font-size:17px;line-height:1.6;width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;min-height:76px;resize:vertical}.mf textarea.cur{outline:3px solid #f59e0b;outline-offset:1px}.msec{font-weight:700;font-size:15px;margin-top:10px;color:var(--acc)}#mbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0;display:grid;gap:6px}#mrec.on{background:#dc2626;color:#fff}#mst{font-size:13px;border-radius:999px;padding:5px 10px;background:#e0f2fe;color:#075985;justify-self:start}#mint{font-size:13px;color:#9a3412;min-height:1.2em}';
+  document.head.appendChild(css);
+  document.querySelector('h1').textContent='即時會議紀錄';
+  var sub=document.getElementById('mt'), box=document.getElementById('box'), note=document.querySelector('.wrap > .note');
+  if(note) note.textContent='內容在手機上加密後才送出，雲端只看得到亂碼；院內系統收到後立即刪除。';
+  box.innerHTML='<div class="big">讀取會議紀錄中…</div>';
+  var cur=null, F=[], sent=0, edited={}, snapT=0, SYS=false, BLOCK=false;
+  var DEV=(function(){ try{ var d=localStorage.getItem('tbm-dev'); if(!d){ d='P'+Math.random().toString(36).slice(2,8).toUpperCase(); localStorage.setItem('tbm-dev',d); } return d; }catch(e){ return 'P'+rnd(3); } })();
+  function st(t,bg,fg){ var e=document.getElementById('mst'); if(e){ e.textContent=t; e.style.background=bg; e.style.color=fg; } }
+  function load(first){
+    fetch(BASE+'/'+encodeURIComponent(COL)+'/MS_'+encodeURIComponent(ID)).then(function(r){ if(r.status===404) return null; if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(d){ if(!d){ if(first) box.innerHTML='<div class="big">找不到這份會議紀錄。</div><div class="msg">請院內會議紀錄頁保持開啟，再重新掃描 QR Code。</div>'; return; }
+        var x=dec(d.fields.i.stringValue); if(x.dev&&x.dev!==DEV){ block(); return; } lastX=x; if(first) render(x); else merge(x); sys(!!x.sys); })
+      .catch(function(e){ if(first) box.innerHTML='<div class="big">讀取失敗</div><div class="msg err">'+esc(e.message||'請確認手機已連上網路')+'</div>'; }); }
+  function render(x){
+    sub.textContent=x.title||'會議紀錄';
+    var h='<div id="mbar"><button class="b pri" id="mrec" type="button">🎙 錄音（寫入目前欄位）</button><span id="mst">☁ 已連線</span><div id="mint"></div></div><div class="note">點一下要記錄的欄位（會出現黃框），再按「🎙 錄音」口述；也可直接打字或用鍵盤的 🎤。內容會即時回傳院內會議紀錄。</div>', sec='';
+    F=x.fields||[];
+    F.forEach(function(f,i){ if(f.sec&&f.sec!==sec){ sec=f.sec; h+='<div class="msec">'+esc(sec)+'</div>'; }
+      h+='<div class="mf"><label for="mf'+i+'">'+esc(f.label||'')+'</label><textarea id="mf'+i+'" data-k="'+esc(f.k)+'" rows="'+(f.input?1:3)+'">'+esc(f.v||'')+'</textarea></div>'; });
+    h+='<div class="msec" id="maddSec" hidden>手機新增的項目</div><div id="madd"></div><div class="row" style="margin-top:10px"><button class="b sec" type="button" id="mAddD">＋ 新增討論事項</button><button class="b sec" type="button" id="mAddM">＋ 新增臨時動議</button></div>';
+    box.innerHTML=h; KEYS={}; FB={}; F.forEach(function(f){ KEYS[f.k]=1; FB[f.k]=f.v||''; });
+    [].forEach.call(box.querySelectorAll('textarea'),bind);
+    document.getElementById('mrec').onclick=toggle;
+    document.getElementById('mAddD').onclick=function(){ addItem('discussionItems','討論事項'); };
+    document.getElementById('mAddM').onclick=function(){ addItem('motionItems','臨時動議'); }; }
+  var KEYS={}, lastX=null, FB={};
+  function bind(t){ t.addEventListener('focus',function(){ if(cur) cur.classList.remove('cur'); cur=t; t.classList.add('cur'); }); t.addEventListener('input',function(){ want(t); }); }
+  function addItem(c,head){ var sid=(c==='discussionItems'?'dp':'mp')+rnd(3);
+    Q['+'+sid]={p:{op:'add',c:c,sid:sid,head:head,dev:DEV},t:Date.now()}; push();
+    var w=document.getElementById('madd'); document.getElementById('maddSec').hidden=false;
+    var d=document.createElement('div'); d.style.cssText='display:grid;gap:6px;border:1px dashed var(--line);border-radius:10px;padding:10px;margin-top:8px';
+    d.innerHTML='<b style="font-size:14px">'+esc(head)+'（新增）</b><div class="mf"><label>項目名稱</label><textarea rows="1" data-k="'+sid+'.name"></textarea></div><div class="mf"><label>內容</label><textarea rows="3" data-k="'+sid+'.content"></textarea></div>';
+    w.appendChild(d); [].forEach.call(d.querySelectorAll('textarea'),bind); KEYS[sid+'.name']=KEYS[sid+'.content']=1; FB[sid+'.name']=FB[sid+'.content']='';
+    var t=d.querySelector('textarea'); t.focus(); t.scrollIntoView({block:'center'}); }
+  function merge(x){ var nw=(x.fields||[]).some(function(f){ return !KEYS[f.k]; }); if(nw&&!on&&(!document.activeElement||document.activeElement.tagName!=='TEXTAREA')&&!Object.keys(Q).length){ render(x); return; }
+    (x.fields||[]).forEach(function(f){ var t=box.querySelector('textarea[data-k="'+f.k.replace(/"/g,'')+'"]'); if(t&&t!==document.activeElement&&!edited[f.k]&&!Q[f.k]){ if(t.value!==f.v) t.value=f.v||''; FB[f.k]=f.v||''; } }); }
+  var tm={}, Q={}, busy=false;
+  function want(t){ var k=t.dataset.k; edited[k]=Date.now(); clearTimeout(tm[k]); tm[k]=setTimeout(function(){ var bs=(k in FB)?FB[k]:null; Q[k]={p:{k:k,v:t.value,b:bs,dev:DEV},t:Date.now()}; push(); },1200); }
+  function push(){ if(busy||BLOCK) return; var ks2=Object.keys(Q); if(!ks2.length) return; busy=true; var k=ks2[0], it=Q[k], id='MIN'+ID+'_'+it.t+'_'+rnd(3);
+    fetch(BASE+'/'+encodeURIComponent(COL)+'?documentId='+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{m:{stringValue:'MIN'+ID},h:{stringValue:''},s:{stringValue:'min'},t:{integerValue:String(it.t)},d:{stringValue:'phone'},i:{stringValue:enc(it.p)}}})})
+      .then(function(r){ if(!r.ok) throw new Error(r.status); if(it.p&&it.p.k&&!it.p.op&&typeof it.p.v==='string') FB[it.p.k]=it.p.v; if(Q[k]&&Q[k].t===it.t) delete Q[k]; sent++; st('☁ 已即時回傳（'+sent+' 次）','#dcfce7','#166534'); var pk=it.p&&it.p.k; if(pk){ var et=edited[pk]; setTimeout(function(){ if(edited[pk]===et) delete edited[pk]; },15000); } busy=false; push(); })
+      .catch(function(){ busy=false; st('⚠ 網路中斷，恢復後自動補傳','#fee2e2','#991b1b'); setTimeout(push,6000); }); }
+  addEventListener('online',push);
+  // 錄音轉文字（自動續聽）
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition, rec=null, on=false, tgt=null;
+  function toggle(){ var b=document.getElementById('mrec'), it=document.getElementById('mint');
+    if(on){ on=false; try{ rec&&rec.stop(); }catch(e){} b.classList.remove('on'); b.textContent='🎙 錄音（寫入目前欄位）'; it.textContent=''; return; }
+    if(!SR){ it.textContent='這個瀏覽器不支援錄音轉文字，請點欄位後用鍵盤上的 🎤 語音輸入。'; return; }
+    if(!cur){ it.textContent='請先點一下要寫入的欄位，再按錄音。'; return; }
+    tgt=cur; on=true; b.classList.add('on'); b.textContent='⏹ 停止錄音'; it.textContent='聆聽中…'; start(); }
+  function start(){ rec=new SR(); rec.lang='zh-TW'; rec.continuous=true; rec.interimResults=true;
+    rec.onresult=function(e){ var fin='', im=''; for(var i=e.resultIndex;i<e.results.length;i++){ var r=e.results[i]; if(r.isFinal) fin+=r[0].transcript; else im+=r[0].transcript; }
+      document.getElementById('mint').textContent=im?('辨識中：'+im):'聆聽中…';
+      if(fin){ var t=tgt||cur; if(t){ var v=t.value, add=fin.trim(), k=t.dataset.k; t.value=v+(v&&!/[\s，。、！？\n]$/.test(v)?'，':'')+add; if(k in FB) FB[k]=t.value; edited[k]=Date.now(); Q['@'+k+'@'+Date.now()]={p:{op:'app',k:k,v:add,dev:DEV},t:Date.now()}; push(); } } };
+    rec.onerror=function(e){ if(e.error==='not-allowed'||e.error==='service-not-allowed'){ on=false; document.getElementById('mint').textContent='麥克風權限被拒絕，請允許使用麥克風。'; } };
+    rec.onend=function(){ if(on) setTimeout(function(){ if(on) try{ start(); }catch(e){} },250); else { var b=document.getElementById('mrec'); if(b){ b.classList.remove('on'); b.textContent='🎙 錄音（寫入目前欄位）'; } } };
+    try{ rec.start(); }catch(e){} }
+  document.addEventListener('focusin',function(e){ if(on&&e.target&&e.target.tagName==='TEXTAREA') tgt=e.target; });
+  function block(){ BLOCK=true; on=false; try{ rec&&rec.stop(); }catch(e){} Q={}; box.innerHTML='<div class="big">🔒 此會議紀錄已由另一支手機使用中</div><div class="msg">會議紀錄 QR Code 僅限一支手機連線。如需改用這支手機，請院內在會議紀錄頁按「📱 會議紀錄 QR Code」→「🔄 換一支手機」，再掃描新的 QR Code。</div>'; }
+  function sys(v){ return;   // 2026-10-18：系統錄音與手機可同時收音，不再暫停手機
+    if(v===SYS) return; SYS=v; var bar=document.getElementById('mbar'); if(!bar) return; var n=document.getElementById('msys');
+    if(v){ if(on) toggle(); if(!n){ n=document.createElement('div'); n.id='msys'; n.style.cssText='background:#fee2e2;color:#991b1b;border-radius:10px;padding:8px 10px;font-size:14px;line-height:1.6'; bar.appendChild(n); } n.textContent='🔴 報告者正在使用系統錄音，以系統錄音為主；手機錄音與輸入暫停。'; }
+    else { if(n) n.remove(); if(lastX){ edited={}; (lastX.fields||[]).forEach(function(f){ var t=box.querySelector('textarea[data-k="'+f.k.replace(/"/g,'')+'"]'); if(t) t.value=f.v||''; }); } }   // 系統錄音結束：先換成院內最新內容，避免手機舊內容蓋掉系統錄音
+    var b=document.getElementById('mrec'); if(b) b.disabled=v; [].forEach.call(box.querySelectorAll('textarea'),function(t){ t.readOnly=v; }); }
+  function hello(){ Q['!hello']={p:{op:'hello',dev:DEV},t:Date.now()}; push(); }
+  hello(); load(true); setInterval(function(){ if(!BLOCK) load(false); },5000);
+})();
+</script>
+<script>
+(function(){
+  if(window.__TBM_MIN_MODE||window.__TBM_RP_MODE||window.__TBM_MAIL_MODE) return;
+  var box=document.getElementById('box');
+  function q(){ var o={}, h=location.hash.slice(1); h.split('&').forEach(function(kv){ var i=kv.indexOf('='); if(i>0){ var k=kv.slice(0,i), v=kv.slice(i+1); try{ v=decodeURIComponent(v); }catch(e){} o[k]=v; } }); return o; }
+  var P=q(), M=P.m||'', K=P.k||'', PROJ=P.p||'tb-sign-in-sheet', COL=P.c||'tbm_checkin', TITLE=P.t||'';
+  var R=(P.r||'').split('|').map(function(x){ var a=x.split('~'); return a.length>=2?{s:a[0],n:a[1],a:a[2]==='1'}:null; }).filter(function(x){ return x&&/^[mfa]\d{1,3}$/.test(x.s)&&x.n; });
+  try{ if(R.length) sessionStorage.setItem('tbm-r-'+M,JSON.stringify({r:R,k:K,p:PROJ,c:COL,t:TITLE})); else if(M){ var sv=JSON.parse(sessionStorage.getItem('tbm-r-'+M)||'null'); if(sv){ R=sv.r; K=sv.k; PROJ=sv.p; COL=sv.c; TITLE=sv.t; } } }catch(e){}
+  if(M&&location.hash){ try{ history.replaceState(null,'',location.pathname+'#m='+encodeURIComponent(M)); }catch(e){} }
+  function ls(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function dev(){ var d=ls('tbm-dev'); if(!d){ d='P'+Math.random().toString(36).slice(2,8).toUpperCase(); ls('tbm-dev',d); } return d; }
+  function $(id){ return document.getElementById(id); }
+  var MK='tbm-me-'+M, CONSENT='本人同意授權本會議系統於結核病管理小組會議之簽到單、病審單及診療醫師簽章欄位，以本電子印章代替親筆簽名。';
+    function redInk(im){ var sc=Math.min(1,1600/im.width,1600/im.height), w=Math.max(1,Math.round(im.width*sc)), h=Math.max(1,Math.round(im.height*sc));
+    var c=document.createElement('canvas'); c.width=w; c.height=h; var x=c.getContext('2d',{willReadFrequently:true}); x.drawImage(im,0,0,w,h);
+    var d=x.getImageData(0,0,w,h), a=d.data, n=w*h, R=new Float32Array(n), hist=new Array(256).fill(0), i;
+    for(i=0;i<n;i++){ var r=a[i*4],g=a[i*4+1],b=a[i*4+2], v=r-(g+b)/2; R[i]=v; if(v>0) hist[Math.min(255,v|0)]++; }
+    // 紅色程度的門檻（Otsu），至少 35
+    var tot=0,sum=0; for(i=0;i<256;i++){ tot+=hist[i]; sum+=i*hist[i]; } var wB=0,sB=0,best=0,T=35;
+    for(i=0;i<256;i++){ wB+=hist[i]; if(!wB) continue; var wF=tot-wB; if(!wF) break; sB+=i*hist[i]; var mB=sB/wB,mF=(sum-sB)/wF,vv=wB*wF*(mB-mF)*(mB-mF); if(vv>best){ best=vv; T=i; } }
+    T=Math.max(35,T); var M=new Uint8Array(n), cnt=0; for(i=0;i<n;i++) if(R[i]>T){ M[i]=1; cnt++; }
+    if(cnt<n*0.002) return null;   // 沒有明顯紅色：當作一般圖片處理
+    // 去除零星雜點後取範圍
+    var x0=w,y0=h,x1=-1,y1=-1; for(var y=1;y<h-1;y++) for(var xx=1;xx<w-1;xx++){ var k=y*w+xx; if(!M[k]) continue; var nb=M[k-1]+M[k+1]+M[k-w]+M[k+w]+M[k-w-1]+M[k-w+1]+M[k+w-1]+M[k+w+1]; if(nb<3) continue; if(xx<x0)x0=xx; if(xx>x1)x1=xx; if(y<y0)y0=y; if(y>y1)y1=y; }
+    if(x1<0) return null;
+    // 只保留最密集的區塊（避免照到其他紅色物品）：以列／欄墨量 5% 以上的範圍收縮
+    function shrink(get,len,lo,hi){ var mx=0,v=[]; for(var t=lo;t<=hi;t++){ var s0=get(t); v.push(s0); if(s0>mx) mx=s0; } var a0=0,a1=v.length-1; while(a0<a1&&v[a0]<mx*0.05) a0++; while(a1>a0&&v[a1]<mx*0.05) a1--; return [lo+a0,lo+a1]; }
+    var ys=shrink(function(y){ var s0=0; for(var xx=x0;xx<=x1;xx++) s0+=M[y*w+xx]; return s0; },h,y0,y1); y0=ys[0]; y1=ys[1];
+    var xs=shrink(function(xx){ var s0=0; for(var y=y0;y<=y1;y++) s0+=M[y*w+xx]; return s0; },w,x0,x1); x0=xs[0]; x1=xs[1];
+    var m=Math.round(Math.max(x1-x0,y1-y0)*0.02)+2; x0=Math.max(0,x0-m); y0=Math.max(0,y0-m); x1=Math.min(w-1,x1+m); y1=Math.min(h-1,y1+m);
+    var sw=x1-x0+1, sh=y1-y0+1, o=document.createElement('canvas'); o.width=sw; o.height=sh; var ox=o.getContext('2d'), od=ox.createImageData(sw,sh), q=od.data;
+    for(var y2=0;y2<sh;y2++) for(var x2=0;x2<sw;x2++){ var k2=(y0+y2)*w+(x0+x2), al=Math.max(0,Math.min(1,(R[k2]-T*0.55)/(T*0.9))), j=(y2*sw+x2)*4;
+      q[j]=198; q[j+1]=28; q[j+2]=38; q[j+3]=Math.round(al*255); }   // 統一成印泥紅
+    ox.putImageData(od,0,0);
+    var s2=Math.min(1,900/sw,600/sh), out; do{ var o2=document.createElement('canvas'); o2.width=Math.max(1,Math.round(sw*s2)); o2.height=Math.max(1,Math.round(sh*s2)); var c2=o2.getContext('2d'); c2.imageSmoothingQuality='high'; c2.drawImage(o,0,0,o2.width,o2.height); out=o2.toDataURL('image/png'); s2*=0.85; }while(out.length>90000&&s2>0.15);
+    return out; }
+
+/* ===== 印章照片裁切（2026-10-17）：拍照／選圖後先框選印章範圍，再送出 ===== */
+window.__cropImg=function(im){ return new Promise(function(ok,no){
+  var D=document, ov=D.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:14px;box-sizing:border-box;font-family:-apple-system,"Microsoft JhengHei","PingFang TC",sans-serif;color:#fff;touch-action:none;user-select:none;-webkit-user-select:none';
+  ov.innerHTML='<div style="font-size:17px;font-weight:700;text-align:center">✂ 拖曳框線，框住印章就好</div>'+
+    '<div style="font-size:13px;color:#cbd5e1;text-align:center">拖動框內＝移動　拖動四角＝調整大小　在框外拖一下＝重新框選</div>'+
+    '<div id="crWrap" style="position:relative;line-height:0;max-width:100%;touch-action:none"><canvas id="crCv" style="display:block;max-width:calc(100vw - 28px);max-height:calc(100vh - 190px);touch-action:none"></canvas>'+
+    '<div id="crBox" style="position:absolute;border:2px solid #facc15;box-shadow:0 0 0 9999px rgba(0,0,0,.55);box-sizing:border-box;cursor:move;touch-action:none"></div></div>'+
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">'+
+    '<button type="button" id="crOk" style="font:inherit;font-size:16px;font-weight:700;border:0;border-radius:10px;padding:12px 22px;background:#16a34a;color:#fff;min-height:48px">✂ 裁切並使用</button>'+
+    '<button type="button" id="crAll" style="font:inherit;font-size:15px;border:0;border-radius:10px;padding:12px 16px;background:#e2e8f0;color:#0f172a;min-height:48px">整張使用</button>'+
+    '<button type="button" id="crNo" style="font:inherit;font-size:15px;border:1px solid #94a3b8;border-radius:10px;padding:12px 16px;background:transparent;color:#fff;min-height:48px">取消重拍</button></div>';
+  D.body.appendChild(ov);
+  var cv=ov.querySelector('#crCv'), box=ov.querySelector('#crBox'), sc=Math.min(1,1400/im.width,1400/im.height);
+  cv.width=Math.max(1,Math.round(im.width*sc)); cv.height=Math.max(1,Math.round(im.height*sc)); cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+  var H=['nw','ne','sw','se'], hs={};
+  H.forEach(function(k){ var h=D.createElement('div'); h.dataset.h=k; h.style.cssText='position:absolute;width:34px;height:34px;margin:-17px;touch-action:none;'+(k[0]==='n'?'top:0;':'top:100%;')+(k[1]==='w'?'left:0;':'left:100%;')+'cursor:'+k+'-resize';
+    h.innerHTML='<div style="position:absolute;left:9px;top:9px;width:16px;height:16px;border-radius:50%;background:#facc15;border:2px solid #fff;box-sizing:border-box;pointer-events:none"></div>'; box.appendChild(h); hs[k]=h; });
+  var r={x:.15,y:.2,w:.7,h:.6};   // 比例座標（0–1）
+  function draw(){ box.style.left=r.x*100+'%'; box.style.top=r.y*100+'%'; box.style.width=r.w*100+'%'; box.style.height=r.h*100+'%'; }
+  draw();
+  var drag=null;
+  function pos(e){ var b=cv.getBoundingClientRect(); return {x:Math.min(1,Math.max(0,(e.clientX-b.left)/b.width)),y:Math.min(1,Math.max(0,(e.clientY-b.top)/b.height))}; }
+  var wrap=ov.querySelector('#crWrap');
+  wrap.addEventListener('pointerdown',function(e){ e.preventDefault(); var p=pos(e), t=e.target, hk=t.dataset&&t.dataset.h;
+    try{ wrap.setPointerCapture(e.pointerId); }catch(_){}
+    if(hk) drag={m:'h',k:hk,r0:{x:r.x,y:r.y,w:r.w,h:r.h}};
+    else if(t===box) drag={m:'mv',p0:p,r0:{x:r.x,y:r.y,w:r.w,h:r.h}};
+    else { drag={m:'new',p0:p}; r={x:p.x,y:p.y,w:0,h:0}; draw(); } });
+  wrap.addEventListener('pointermove',function(e){ if(!drag) return; e.preventDefault(); var p=pos(e), o=drag.r0, MIN=.04;
+    if(drag.m==='mv'){ r.x=Math.min(1-o.w,Math.max(0,o.x+p.x-drag.p0.x)); r.y=Math.min(1-o.h,Math.max(0,o.y+p.y-drag.p0.y)); }
+    else if(drag.m==='new'){ r.x=Math.min(p.x,drag.p0.x); r.y=Math.min(p.y,drag.p0.y); r.w=Math.abs(p.x-drag.p0.x); r.h=Math.abs(p.y-drag.p0.y); }
+    else { var x0=o.x,y0=o.y,x1=o.x+o.w,y1=o.y+o.h;
+      if(drag.k[1]==='w') x0=Math.min(p.x,x1-MIN); else x1=Math.max(p.x,x0+MIN);
+      if(drag.k[0]==='n') y0=Math.min(p.y,y1-MIN); else y1=Math.max(p.y,y0+MIN);
+      r={x:x0,y:y0,w:x1-x0,h:y1-y0}; }
+    draw(); });
+  function up(){ if(drag&&drag.m==='new'&&(r.w<.03||r.h<.03)) r={x:.15,y:.2,w:.7,h:.6}; drag=null; draw(); }
+  wrap.addEventListener('pointerup',up); wrap.addEventListener('pointercancel',up);
+  function done(v,err){ ov.remove(); if(err) no(err); else ok(v); }
+  function out(rr){ var sx=Math.round(rr.x*im.width), sy=Math.round(rr.y*im.height), sw=Math.max(1,Math.round(rr.w*im.width)), sh=Math.max(1,Math.round(rr.h*im.height));
+    var c=D.createElement('canvas'); c.width=sw; c.height=sh; c.getContext('2d').drawImage(im,sx,sy,sw,sh,0,0,sw,sh);
+    var o=new Image(); o.onload=function(){ done(o); }; o.onerror=function(){ done(im); }; o.src=c.toDataURL('image/png'); }
+  ov.querySelector('#crOk').onclick=function(){ out(r); };
+  ov.querySelector('#crAll').onclick=function(){ done(im); };
+  ov.querySelector('#crNo').onclick=function(){ var e=new Error('已取消，請重新拍照或選圖。'); e.cancel=true; done(null,e); };
+}); };
+
+  // ---- 簽名板 ----
+  function pad(holder,onchange){
+    holder.innerHTML='<div class="pad"><canvas></canvas><div class="base"></div><div class="ph">請在框內簽名</div></div>';
+    var cv=holder.querySelector('canvas'), ph=holder.querySelector('.ph'), ctx, drawn=false, last=null;
+    function size(){ var r=cv.getBoundingClientRect(), d=window.devicePixelRatio||1; cv.width=Math.round(r.width*d); cv.height=Math.round(200*d); ctx=cv.getContext('2d'); ctx.scale(d,d); ctx.lineWidth=3; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#0b2a6b'; }
+    size();
+    function pt(e){ var r=cv.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; }
+    cv.addEventListener('pointerdown',function(e){ e.preventDefault(); cv.setPointerCapture(e.pointerId); last=pt(e); ctx.beginPath(); ctx.arc(last.x,last.y,1.4,0,7); ctx.fillStyle='#0b2a6b'; ctx.fill(); if(!drawn){ drawn=true; ph.hidden=true; onchange&&onchange(); } });
+    cv.addEventListener('pointermove',function(e){ if(!last) return; e.preventDefault(); var p=pt(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; });
+    ['pointerup','pointercancel','pointerleave'].forEach(function(ev){ cv.addEventListener(ev,function(){ last=null; }); });
+    return { clear:function(){ ctx.clearRect(0,0,cv.width,cv.height); drawn=false; ph.hidden=false; onchange&&onchange(); }, has:function(){ return drawn; },
+      png:function(){ if(!drawn) return null; var w=cv.width,h=cv.height,d=cv.getContext('2d').getImageData(0,0,w,h).data,x0=w,y0=h,x1=-1,y1=-1;
+        for(var y=0;y<h;y+=2) for(var x=0;x<w;x+=2){ if(d[(y*w+x)*4+3]>0){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } }
+        if(x1<0) return null; var m=10; x0=Math.max(0,x0-m); y0=Math.max(0,y0-m); x1=Math.min(w,x1+m); y1=Math.min(h,y1+m);
+        var sw=x1-x0, sh=y1-y0, sc=Math.min(1,600/sw,200/sh), o=document.createElement('canvas'); o.width=Math.max(1,Math.round(sw*sc)); o.height=Math.max(1,Math.round(sh*sc));
+        o.getContext('2d').drawImage(cv,x0,y0,sw,sh,0,0,o.width,o.height); return o.toDataURL('image/png'); } };
+  }
+  // ---- 名單 ----
+  // 院內系統公布的已簽到格位（只有代號）：院內刪除簽名後這裡也會變回未簽到
+  var ST=null;
+  function loadST(){ fetch('https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(PROJ)+'/databases/(default)/documents/'+encodeURIComponent(COL)+'/ST_'+encodeURIComponent(M))
+      .then(function(r){ return r.ok?r.json():(r.status===404?{}:null); }).then(function(d){ if(!d) return; var v=d.fields&&d.fields.i&&d.fields.i.stringValue||''; var o={}; v.split(',').forEach(function(x){ if(x&&x!=='-') o[x]=1; });
+        var was=JSON.stringify(ST); ST=o; var me=ls(MK); if(me&&!o[me]&&!/^a/.test(me)) ls(MK,''); if(was!==JSON.stringify(ST)&&box.querySelector('.who')) list(); }).catch(function(){}); }
+  function list(){
+    var me=ls(MK), mem=R.filter(function(r){ return r.s[0]==='m'; }), att=R.filter(function(r){ return r.s[0]!=='m'; });
+    var h='<div class="big">請點選您的名字：</div>';
+    var mt=+(ls(MK+'-t')||0); function signed(s){ return (ST&&ST[s])||(me===s&&(!ST||Date.now()-mt<90000)); }
+    function btns(a){ return a.map(function(r){ return '<button class="who'+(signed(r.s)?' me':'')+'" data-s="'+esc(r.s)+'"><span>'+esc(r.n)+(signed(r.s)?'　✓ 已簽到':'')+'</span>'+(r.a?'<small>🔴 已授權印章</small>':'')+'</button>'; }).join(''); }
+    if(mem.length) h+='<div class="grp">出席人員</div>'+btns(mem);
+    var ADD=[]; try{ ADD=JSON.parse(sessionStorage.getItem('tbm-add-'+M)||'[]').filter(function(x){ return !R.some(function(r){ return r.n===x.n; }); }); }catch(e){}
+    if(att.length||ADD.length) h+='<div class="grp">列席人員</div>'+btns(att)+ADD.map(function(x){ return '<div class="who me" style="cursor:default"><span>'+esc(x.n)+'　✓ 已簽到（新增）</span></div>'; }).join('');
+    h+='<button class="b sec" id="addMe" style="margin-top:14px">＋ 名單上沒有我（新增姓名）</button>';
+    box.innerHTML=h; $('addMe').onclick=addNew; if(!list._ld||Date.now()-list._ld>3000){ list._ld=Date.now(); loadST(); }
+    [].forEach.call(box.querySelectorAll('.who'),function(b){ b.onclick=function(){ var r=R.filter(function(x){ return x.s===b.dataset.s; })[0]; if(r) (r.a?authorized(r):choose(r)); }; });
+  }
+  // 已授權印章：一鍵簽到，院內系統帶入印章
+  function authorized(r){
+    box.innerHTML='<div class="big"><b>'+esc(r.n)+'</b></div><div class="msg">您已授權電子印章，按「確認簽到」後院內系統會自動帶入您的印章。</div>'+
+      '<button class="b pri" id="yes">確認簽到（帶入電子印章）</button><button class="b sec" id="hand">改用手寫簽名</button><button class="b sec" id="back">返回名單</button>';
+    $('yes').onclick=function(){ send(r,{}); }; $('hand').onclick=function(){ choose(r); }; $('back').onclick=list;
+  }
+  // 未授權：手寫簽名，或拍照取得印章並授權
+  function choose(r){
+    box.innerHTML='<div class="big"><b>'+esc(r.n)+'</b>　簽到</div>'+
+      '<div class="stampbox"><b>🔴 改用電子印章</b><span class="note" style="margin:0">（第一次使用需上傳並授權）</span>'+
+        '<div class="row"><button class="b red" id="cam">📷 拍照印章</button><button class="b sec" id="pick">🖼 選擇圖片</button></div>'+
+        '<input type="file" id="camIn" accept="image/*" capture="environment"><input type="file" id="picIn" accept="image/*">'+
+        '<div class="note" style="margin:0">拍照時把蓋好的印章放在白紙上、光線充足、鏡頭正對印章；系統會自動抓出紅色印文、去掉背景並裁切。</div>'+
+        '<div id="stPrev" hidden><img id="stImg" alt="印章預覽"></div>'+
+        '<label class="cons" id="consL" hidden><input type="checkbox" id="cons"><span>我是 <b>'+esc(r.n)+'</b> 本人（或經本人授權）。'+CONSENT+'（請於下方簽名框親筆簽名，作為授權紀錄）</span></label>'+
+      '</div>'+
+      '<div class="note" id="padTip">請用手指在框內簽名；手機橫放可以簽得比較大。</div><div id="padH"></div><div class="msg" id="msg"></div>'+
+      '<div class="row"><button class="b sec" id="clr">重簽</button><button class="b sec" id="back">取消</button><button class="b pri" id="go" disabled>完成</button></div>';
+    var stamp=null, P2=pad($('padH'),upd);
+    function upd(){ $('go').disabled=!(P2.has()&&(!stamp||$('cons').checked)); $('go').textContent=stamp?'授權並簽到':'完成'; }
+    $('clr').onclick=function(){ P2.clear(); }; $('back').onclick=list;
+    $('cam').onclick=function(){ $('camIn').click(); }; $('pick').onclick=function(){ $('picIn').click(); };
+    $('camIn').onchange=$('picIn').onchange=function(){ var f=this.files[0]; this.value=''; if(!f) return; $('msg').className='msg'; $('msg').textContent='處理中…';
+      var im0=new Image(); im0.onload=function(){ $('msg').textContent=''; window.__cropImg(im0).then(function(im){ var u=null; try{ u=redInk(im); }catch(e){} URL.revokeObjectURL(im0.src);
+        if(!u){ $('msg').className='msg err'; $('msg').textContent='照片裡找不到紅色印章，請在光線充足處、靠近一點重拍。'; return; }
+        stamp=u; $('stImg').src=u; $('stPrev').hidden=false; $('consL').hidden=false; $('padTip').textContent='授權需要親筆簽名：請在下方框內簽名，作為授權紀錄。'; $('msg').textContent=''; upd(); },function(e){ URL.revokeObjectURL(im0.src); $('msg').className='msg'; $('msg').textContent=e.message; }); };
+      im0.onerror=function(){ $('msg').className='msg err'; $('msg').textContent='讀不到這張照片，請再試一次。'; }; im0.src=URL.createObjectURL(f); };
+    $('cons').onchange=upd;
+    $('go').onclick=function(){ var sig=P2.png(); if(!sig) return; if(stamp) send(r,{i:stamp,w:'stamp',g:sig}); else send(r,{i:sig,w:'sig'}); };
+  }
+  // 名單上沒有的人：輸入姓名、燈號，手寫簽名 → 院內系統新增到列席人員
+  function addNew(){
+    box.innerHTML='<div class="big">新增姓名簽到</div><div class="note">請輸入姓名（可加職稱，例如：王小明醫師）與燈號，再於下方框內簽名。送出後會加到簽到單的「列席人員」。</div>'+
+      '<label class="note" style="display:block;margin:10px 0 4px">姓名（含職稱）</label><input id="nn" maxlength="20" autocomplete="name" style="font:inherit;font-size:18px;width:100%;box-sizing:border-box;padding:12px;border:1px solid #cbd5e1;border-radius:10px">'+
+      '<label class="note" style="display:block;margin:10px 0 4px">燈號</label><input id="ne" maxlength="16" autocapitalize="characters" style="font:inherit;font-size:18px;width:100%;box-sizing:border-box;padding:12px;border:1px solid #cbd5e1;border-radius:10px;text-transform:uppercase">'+
+      '<div class="note" style="margin-top:12px">請用手指在框內簽名；手機橫放可以簽得比較大。</div><div id="padH"></div><div class="msg" id="msg"></div>'+
+      '<div class="row"><button class="b sec" id="clr">重簽</button><button class="b sec" id="back">取消</button><button class="b pri" id="go" disabled>完成</button></div>';
+    var P3=pad($('padH'),upd);
+    function upd(){ $('go').disabled=!(P3.has()&&$('nn').value.trim()&&$('ne').value.trim()); }
+    $('nn').oninput=$('ne').oninput=upd; $('clr').onclick=function(){ P3.clear(); }; $('back').onclick=list;
+    $('go').onclick=function(){ var nm=$('nn').value.trim().slice(0,20), no=$('ne').value.trim().toUpperCase().slice(0,16), sig=P3.png();
+      if(!nm||!no||!sig){ $('msg').className='msg err'; $('msg').textContent='請輸入姓名、燈號並簽名。'; return; }
+      send({s:'a'+(Date.now()%100000),n:nm,add:1},{i:sig,w:'sig',n:nm,e:no}); };
+    setTimeout(function(){ $('nn').focus(); },50);
+  }
+  function send(r,x){
+    box.innerHTML='<div class="big">簽到中…</div>';
+    var t=Date.now(), id=M+'_'+r.s+'_'+t.toString(36), F={m:{stringValue:M},h:{stringValue:''},s:{stringValue:r.s},t:{integerValue:String(t)},d:{stringValue:dev()},k:{stringValue:K}};
+    ['i','w','g','n','e'].forEach(function(k){ if(x[k]) F[k]={stringValue:x[k]}; });
+    fetch('https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(PROJ)+'/databases/(default)/documents/'+encodeURIComponent(COL)+'?documentId='+encodeURIComponent(id),
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:F})})
+      .then(function(res){ if(res.ok||res.status===409) return; return res.text().then(function(tx){ throw new Error(res.status+' '+tx.slice(0,100)); }); })
+      .then(function(){ ls(MK,r.s); ls(MK+'-t',String(Date.now())); if(r.add){ try{ var A=JSON.parse(sessionStorage.getItem('tbm-add-'+M)||'[]'); if(!A.some(function(x){ return x.n===r.n; })) A.push({s:r.s,n:r.n}); sessionStorage.setItem('tbm-add-'+M,JSON.stringify(A)); }catch(e){} } box.innerHTML='<div class="done">✅</div><div class="big" style="text-align:center">'+esc(r.n)+'<br>已送出簽到</div><div class="msg" style="text-align:center;color:var(--sub)">'+(x.w==='stamp'?'印章與授權已送出，院內系統收到後帶入印章。':x.w==='sig'?'簽名已送出。':'院內系統會帶入您的電子印章。')+'<br>請看會議室螢幕，出現您的名字即完成。</div><button class="b sec" id="back">回到名單查看簽到狀況</button>';
+        $('back').onclick=list; })
+      .catch(function(e){ box.innerHTML='<div class="big">送出失敗</div><div class="msg err">'+esc((e&&e.message)||'請確認手機已連上網路')+'</div><button class="b pri" id="re">再試一次</button><button class="b sec" id="back">回到名單</button>';
+        $('re').onclick=function(){ send(r,x); }; $('back').onclick=list; });
+  }
+  if(!M||!PROJ||!R.length){ box.innerHTML='<div class="big">請用手機相機重新掃描會議室螢幕上的「會議簽到 QR Code」。</div><div class="msg" style="color:var(--sub)">（請掃描會議室螢幕上的 QR Code）</div>'+
+    (M?'<div class="note">檢查碼：m='+(M?1:0)+' p='+(PROJ?1:0)+' r='+R.length+'。若 r=0，表示會議室電腦的系統是舊版，請更新整合系統檔。</div>':''); return; }
+  $('mt').textContent=(TITLE?TITLE+' ':'')+'會議簽到';
+  list(); setInterval(function(){ if(box.querySelector('.who')) loadST(); },10000);
+})();
+</script>
+</body>
+</html>
