@@ -2403,7 +2403,7 @@ var qrcode = function() {
   function pad2(n){ return String(n).padStart(2,'0'); }
   function rocD(t){ var d=new Date(t); return (d.getFullYear()-1911)+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'; }
   function render(){ sub.textContent=(X.scope||'')+' 第 '+X.n+' 案　診療醫師：'+(X.doc||'')+(X.exp?'　｜請於 '+rocD(X.exp)+' 前回覆':'');
-    var dv=''; if(X.dflt) dv=(X.dflt.y+1911)+'-'+pad2(X.dflt.m)+'-'+pad2(X.dflt.d);
+    var td=new Date(), dv=td.getFullYear()+'-'+pad2(td.getMonth()+1)+'-'+pad2(td.getDate());   // 預設今天日期（可再點日曆修改）
     box.innerHTML=(X.img?'<div class="lab" style="margin-top:0">病審單內容（僅供檢視，不可修改）</div><img class="sheetimg" alt="病審單內容" src="'+X.img+'">':'<div class="lock">'+esc(X.text||'')+'</div>')+
       '<div class="rp"><div class="big" style="margin-top:8px"><b>回覆意見</b>（以下由診療醫師填寫）</div>'+
       '<label class="o"><input type="radio" name="ag" id="a1" checked>同意上開審查建議，並據以診治病患。</label>'+
@@ -2411,7 +2411,7 @@ var qrcode = function() {
       '<textarea id="why" rows="2" placeholder="不同意時請填寫理由" disabled></textarea>'+
       '<div class="lab">診療醫師簽章</div>'+(X.stamp?'<div class="stb"><button class="b sec" type="button" id="useSt" style="width:auto;padding:10px 14px">🔴 使用我的電子印章</button><img id="stImg2" alt="電子印章" src="'+X.stamp+'" hidden></div>':'')+
       '<div class="note" id="padTip2">請用手指或滑鼠在框內簽名。</div><div id="padR"></div><div class="row" style="margin-top:6px"><button class="b sec" type="button" id="clr2">重簽</button></div>'+
-      '<div class="lab">回覆日期（點選日曆）</div><input type="date" id="dt" value="'+dv+'">'+(X.dflt?'<div class="note">您已於會議當日簽到，已自動帶入當日日期。</div>':'')+
+      '<div class="lab">回覆日期（點選日曆）</div><input type="date" id="dt" value="'+dv+'">'+'<div class="note">已自動帶入今天日期，如需更改請點選日曆。</div>'+
       '<div class="lab">聯絡電話</div><input type="tel" id="tel" value="'+esc(X.tel||'')+'" placeholder="例如：分機 12345">'+
       '<div class="msg" id="rmsg"></div><button class="b pri" type="button" id="go2" style="margin-top:8px">送出回覆</button></div>';
     P=pad($('padR'));
