@@ -42,7 +42,7 @@ input[type=file]{display:none}
   <p class="sub" id="mt">請用手機相機掃描會議室螢幕上的 QR Code</p>
   <div class="card" id="box"></div>
   <p class="note" style="margin-top:12px">名單只顯示在這支手機上，不會送到網站。簽名或印章只傳給院內系統，院內收到後即從雲端刪除。</p>
-<p class="note" id="ver" style="text-align:right;opacity:.6;margin:4px 0 0">版本 1018-1855</p>
+<p class="note" id="ver" style="text-align:right;opacity:.6;margin:4px 0 0">版本 1018-1910</p>
 </div>
 <script>//---------------------------------------------------------------------
 //
@@ -2590,6 +2590,11 @@ window.__cropImg=function(im){ return new Promise(function(ok,no){
       else h+='<div class="mf"><label for="mf'+i+'">'+esc(f.label||'')+'</label><textarea id="mf'+i+'" data-k="'+esc(f.k)+'" rows="'+(f.input?1:3)+'">'+esc(f.v||'')+'</textarea></div>'; });
     var SL={s1:'1.排除結核病',s2:'2.確定結核病',s3:'3.等痰報告或其他檢查下次再審',s4:'4.用藥種類、劑量增修',s5:'5.繼續治療',s6:'6.可停止抗結核治療',s7:'7.轉介 TMTC 團隊評估',s8:'8.其他'};
     CASES=x.cases||[];
+    h+='<div class="msec">列席人員</div><div id="mattL" class="note" style="font-size:15px;line-height:1.8">'+attHtml(x.att||[])+'</div>'+
+      '<div style="display:grid;gap:6px;border:1px dashed var(--line);border-radius:10px;padding:10px"><b style="font-size:14px">＋ 新增列席人員（加入名單後，本人掃「簽到 QR Code」簽名）</b>'+
+      '<input id="maN" placeholder="姓名（可含職稱，例如：王小明醫師）" maxlength="20" style="font:inherit;font-size:16px;border:1px solid var(--line);border-radius:8px;padding:9px">'+
+      '<input id="maC" placeholder="燈號" maxlength="16" autocapitalize="characters" style="font:inherit;font-size:16px;border:1px solid var(--line);border-radius:8px;padding:9px;text-transform:uppercase">'+
+      '<button class="b sec" type="button" id="maGo">加入列席名單</button><div class="msg" id="maMsg"></div></div>';
     if(CASES.length){ h+='<div class="msec">病例審查（共 '+CASES.length+' 案）</div><div class="note">勾選每一案的審查結果，會即時寫回病審單與會議紀錄。</div>';
       CASES.forEach(function(cs){ h+='<div class="mcase" style="border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:4px;margin-top:6px"><b>第 '+cs.n+' 案　'+esc(cs.name)+'</b><div class="note" style="margin:0">診療醫師：'+esc(cs.doc||'（未指定）')+(cs.reply?'　｜醫師回覆：'+cs.reply:'')+'<br>送審原因：'+esc(cs.r||'（未勾選）')+(cs.note?'（'+esc(cs.note)+'）':'')+'</div>'+
         Object.keys(SL).map(function(k){ return '<label class="cons" style="font-size:15.5px"><input type="checkbox" data-n="'+cs.n+'" data-rk="'+k+'"'+(cs.s[k]?' checked':'')+'><span>'+SL[k]+'</span></label>'; }).join('')+
@@ -2601,9 +2606,14 @@ window.__cropImg=function(im){ return new Promise(function(ok,no){
     [].forEach.call(box.querySelectorAll('[data-rk]'),function(el){ var ev=el.type==='checkbox'?'change':'input', tm2=null; el.addEventListener(ev,function(){ var k=el.dataset.rk, n=+el.dataset.n, v=el.type==='checkbox'?el.checked:el.value; RVE[n+k]=Date.now();
       clearTimeout(tm2); tm2=setTimeout(function(){ Q['#'+n+k]={p:{op:'rv',n:n,k:k,v:v,dev:DEV},t:Date.now()}; push(); },el.type==='checkbox'?100:1200); }); });
     document.getElementById('mrec').onclick=toggle;
+    document.getElementById('maGo').onclick=function(){ var n=document.getElementById('maN').value.trim(), cd=document.getElementById('maC').value.trim().toUpperCase(), m=document.getElementById('maMsg');
+      if(!n||!cd){ m.className='msg err'; m.textContent='請輸入姓名及燈號。'; return; }
+      Q['%att'+Date.now()]={p:{op:'att',name:n,code:cd,dev:DEV},t:Date.now()}; push();
+      m.className='msg'; m.style.color='var(--ok)'; m.textContent='已送出：'+n+'（'+cd+'），院內加入名單後，本人即可掃簽到 QR Code 簽名。'; document.getElementById('maN').value=''; document.getElementById('maC').value=''; };
     document.getElementById('mAddD').onclick=function(){ addItem('discussionItems','討論事項'); };
     document.getElementById('mAddM').onclick=function(){ addItem('motionItems','臨時動議'); }; }
   var KEYS={}, lastX=null, FB={}, CASES=[], RVE={};
+  function attHtml(a){ return a.length?a.map(function(p){ return (p.signed?'✅ ':'⬜ ')+esc(p.name); }).join('　'):'（尚無列席人員）'; }
   function bind(t){ t.addEventListener('focus',function(){ if(t.tagName!=='TEXTAREA') return; if(cur) cur.classList.remove('cur'); cur=t; t.classList.add('cur'); }); t.addEventListener(t.type==='date'?'change':'input',function(){ want(t); }); }
   function addItem(c,head){ var sid=(c==='discussionItems'?'dp':'mp')+rnd(3);
     Q['+'+sid]={p:{op:'add',c:c,sid:sid,head:head,dev:DEV},t:Date.now()}; push();
@@ -2612,7 +2622,8 @@ window.__cropImg=function(im){ return new Promise(function(ok,no){
     d.innerHTML='<b style="font-size:14px">'+esc(head)+'（新增）</b><div class="mf"><label>項目名稱</label><textarea rows="1" data-k="'+sid+'.name"></textarea></div><div class="mf"><label>內容</label><textarea rows="3" data-k="'+sid+'.content"></textarea></div>';
     w.appendChild(d); [].forEach.call(d.querySelectorAll('textarea'),bind); KEYS[sid+'.name']=KEYS[sid+'.content']=1; FB[sid+'.name']=FB[sid+'.content']='';
     var t=d.querySelector('textarea'); t.focus(); t.scrollIntoView({block:'center'}); }
-  function merge(x){ var nw=(x.fields||[]).some(function(f){ return !KEYS[f.k]; })||((x.cases||[]).length!==CASES.length);
+  function merge(x){ var aL=document.getElementById('mattL'); if(aL) aL.innerHTML=attHtml(x.att||[]);
+    var nw=(x.fields||[]).some(function(f){ return !KEYS[f.k]; })||((x.cases||[]).length!==CASES.length);
     (x.cases||[]).forEach(function(cs){ Object.keys(cs.s||{}).forEach(function(k){ if(RVE[cs.n+k]&&Date.now()-RVE[cs.n+k]<15000) return; var el=box.querySelector('[data-n="'+cs.n+'"][data-rk="'+k+'"]'); if(!el||el===document.activeElement) return; if(el.type==='checkbox') el.checked=!!cs.s[k]; else el.value=cs.s[k]||''; }); }); if(nw&&!on&&(!document.activeElement||document.activeElement.tagName!=='TEXTAREA')&&!Object.keys(Q).length){ render(x); return; }
     (x.fields||[]).forEach(function(f){ if(f.ro){ var r0=box.querySelector('[data-ro="'+f.k+'"]'); if(r0) r0.textContent=f.v||'待確認'; return; } var t=box.querySelector('[data-k="'+f.k.replace(/"/g,'')+'"]'); if(t&&t!==document.activeElement&&!edited[f.k]&&!Q[f.k]){ if(t.value!==f.v) t.value=f.v||''; FB[f.k]=f.v||''; } }); }
   var tm={}, Q={}, busy=false;
