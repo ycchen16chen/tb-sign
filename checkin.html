@@ -42,6 +42,7 @@ input[type=file]{display:none}
   <p class="sub" id="mt">請用手機相機掃描會議室螢幕上的 QR Code</p>
   <div class="card" id="box"></div>
   <p class="note" style="margin-top:12px">名單只顯示在這支手機上，不會送到網站。簽名或印章只傳給院內系統，院內收到後即從雲端刪除。</p>
+<p class="note" id="ver" style="text-align:right;opacity:.6;margin:4px 0 0">版本 1018-1016</p>
 </div>
 <script>//---------------------------------------------------------------------
 //
@@ -2388,6 +2389,78 @@ var qrcode = function() {
   function unb64(t){ var s=atob(t), u=new Uint8Array(s.length); for(var i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; }
   function enc(obj){ var n=rnd(12), pt=new TextEncoder().encode(JSON.stringify(obj)), k=ks(KEY,n,pt.length); for(var i=0;i<pt.length;i++) pt[i]^=k[i]; var c=b64(pt); return JSON.stringify({n:n,c:c,g:sha256(KEY+'|tag|'+n+'|'+c).slice(0,24)}); }
   function dec(str){ var o=JSON.parse(str); if(sha256(KEY+'|tag|'+o.n+'|'+o.c).slice(0,24)!==o.g) throw new Error('bad'); var u=unb64(o.c), k=ks(KEY,o.n,u.length); for(var i=0;i<u.length;i++) u[i]^=k[i]; return JSON.parse(new TextDecoder().decode(u)); }
+    function redInk(im){ var sc=Math.min(1,1600/im.width,1600/im.height), w=Math.max(1,Math.round(im.width*sc)), h=Math.max(1,Math.round(im.height*sc));
+    var c=document.createElement('canvas'); c.width=w; c.height=h; var x=c.getContext('2d',{willReadFrequently:true}); x.drawImage(im,0,0,w,h);
+    var d=x.getImageData(0,0,w,h), a=d.data, n=w*h, R=new Float32Array(n), hist=new Array(256).fill(0), i;
+    for(i=0;i<n;i++){ var r=a[i*4],g=a[i*4+1],b=a[i*4+2], v=r-(g+b)/2; R[i]=v; if(v>0) hist[Math.min(255,v|0)]++; }
+    // 紅色程度的門檻（Otsu），至少 35
+    var tot=0,sum=0; for(i=0;i<256;i++){ tot+=hist[i]; sum+=i*hist[i]; } var wB=0,sB=0,best=0,T=35;
+    for(i=0;i<256;i++){ wB+=hist[i]; if(!wB) continue; var wF=tot-wB; if(!wF) break; sB+=i*hist[i]; var mB=sB/wB,mF=(sum-sB)/wF,vv=wB*wF*(mB-mF)*(mB-mF); if(vv>best){ best=vv; T=i; } }
+    T=Math.max(35,T); var M=new Uint8Array(n), cnt=0; for(i=0;i<n;i++) if(R[i]>T){ M[i]=1; cnt++; }
+    if(cnt<n*0.002) return null;   // 沒有明顯紅色：當作一般圖片處理
+    // 去除零星雜點後取範圍
+    var x0=w,y0=h,x1=-1,y1=-1; for(var y=1;y<h-1;y++) for(var xx=1;xx<w-1;xx++){ var k=y*w+xx; if(!M[k]) continue; var nb=M[k-1]+M[k+1]+M[k-w]+M[k+w]+M[k-w-1]+M[k-w+1]+M[k+w-1]+M[k+w+1]; if(nb<3) continue; if(xx<x0)x0=xx; if(xx>x1)x1=xx; if(y<y0)y0=y; if(y>y1)y1=y; }
+    if(x1<0) return null;
+    // 只保留最密集的區塊（避免照到其他紅色物品）：以列／欄墨量 5% 以上的範圍收縮
+    function shrink(get,len,lo,hi){ var mx=0,v=[]; for(var t=lo;t<=hi;t++){ var s0=get(t); v.push(s0); if(s0>mx) mx=s0; } var a0=0,a1=v.length-1; while(a0<a1&&v[a0]<mx*0.05) a0++; while(a1>a0&&v[a1]<mx*0.05) a1--; return [lo+a0,lo+a1]; }
+    var ys=shrink(function(y){ var s0=0; for(var xx=x0;xx<=x1;xx++) s0+=M[y*w+xx]; return s0; },h,y0,y1); y0=ys[0]; y1=ys[1];
+    var xs=shrink(function(xx){ var s0=0; for(var y=y0;y<=y1;y++) s0+=M[y*w+xx]; return s0; },w,x0,x1); x0=xs[0]; x1=xs[1];
+    var m=Math.round(Math.max(x1-x0,y1-y0)*0.02)+2; x0=Math.max(0,x0-m); y0=Math.max(0,y0-m); x1=Math.min(w-1,x1+m); y1=Math.min(h-1,y1+m);
+    var sw=x1-x0+1, sh=y1-y0+1, o=document.createElement('canvas'); o.width=sw; o.height=sh; var ox=o.getContext('2d'), od=ox.createImageData(sw,sh), q=od.data;
+    for(var y2=0;y2<sh;y2++) for(var x2=0;x2<sw;x2++){ var k2=(y0+y2)*w+(x0+x2), al=Math.max(0,Math.min(1,(R[k2]-T*0.55)/(T*0.9))), j=(y2*sw+x2)*4;
+      q[j]=198; q[j+1]=28; q[j+2]=38; q[j+3]=Math.round(al*255); }   // 統一成印泥紅
+    ox.putImageData(od,0,0);
+    var s2=Math.min(1,900/sw,600/sh), out; do{ var o2=document.createElement('canvas'); o2.width=Math.max(1,Math.round(sw*s2)); o2.height=Math.max(1,Math.round(sh*s2)); var c2=o2.getContext('2d'); c2.imageSmoothingQuality='high'; c2.drawImage(o,0,0,o2.width,o2.height); out=o2.toDataURL('image/png'); s2*=0.85; }while(out.length>90000&&s2>0.15);
+    return out; }
+
+/* ===== 印章照片裁切（2026-10-17）：拍照／選圖後先框選印章範圍，再送出 ===== */
+window.__cropImg=function(im){ return new Promise(function(ok,no){
+  var D=document, ov=D.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:14px;box-sizing:border-box;font-family:-apple-system,"Microsoft JhengHei","PingFang TC",sans-serif;color:#fff;touch-action:none;user-select:none;-webkit-user-select:none';
+  ov.innerHTML='<div style="font-size:17px;font-weight:700;text-align:center">✂ 拖曳框線，框住印章就好</div>'+
+    '<div style="font-size:13px;color:#cbd5e1;text-align:center">拖動框內＝移動　拖動四角＝調整大小　在框外拖一下＝重新框選</div>'+
+    '<div id="crWrap" style="position:relative;line-height:0;max-width:100%;touch-action:none"><canvas id="crCv" style="display:block;max-width:calc(100vw - 28px);max-height:calc(100vh - 190px);touch-action:none"></canvas>'+
+    '<div id="crBox" style="position:absolute;border:2px solid #facc15;box-shadow:0 0 0 9999px rgba(0,0,0,.55);box-sizing:border-box;cursor:move;touch-action:none"></div></div>'+
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">'+
+    '<button type="button" id="crOk" style="font:inherit;font-size:16px;font-weight:700;border:0;border-radius:10px;padding:12px 22px;background:#16a34a;color:#fff;min-height:48px">✂ 裁切並使用</button>'+
+    '<button type="button" id="crAll" style="font:inherit;font-size:15px;border:0;border-radius:10px;padding:12px 16px;background:#e2e8f0;color:#0f172a;min-height:48px">整張使用</button>'+
+    '<button type="button" id="crNo" style="font:inherit;font-size:15px;border:1px solid #94a3b8;border-radius:10px;padding:12px 16px;background:transparent;color:#fff;min-height:48px">取消重拍</button></div>';
+  D.body.appendChild(ov);
+  var cv=ov.querySelector('#crCv'), box=ov.querySelector('#crBox'), sc=Math.min(1,1400/im.width,1400/im.height);
+  cv.width=Math.max(1,Math.round(im.width*sc)); cv.height=Math.max(1,Math.round(im.height*sc)); cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+  var H=['nw','ne','sw','se'], hs={};
+  H.forEach(function(k){ var h=D.createElement('div'); h.dataset.h=k; h.style.cssText='position:absolute;width:34px;height:34px;margin:-17px;touch-action:none;'+(k[0]==='n'?'top:0;':'top:100%;')+(k[1]==='w'?'left:0;':'left:100%;')+'cursor:'+k+'-resize';
+    h.innerHTML='<div style="position:absolute;left:9px;top:9px;width:16px;height:16px;border-radius:50%;background:#facc15;border:2px solid #fff;box-sizing:border-box;pointer-events:none"></div>'; box.appendChild(h); hs[k]=h; });
+  var r={x:.15,y:.2,w:.7,h:.6};   // 比例座標（0–1）
+  function draw(){ box.style.left=r.x*100+'%'; box.style.top=r.y*100+'%'; box.style.width=r.w*100+'%'; box.style.height=r.h*100+'%'; }
+  draw();
+  var drag=null;
+  function pos(e){ var b=cv.getBoundingClientRect(); return {x:Math.min(1,Math.max(0,(e.clientX-b.left)/b.width)),y:Math.min(1,Math.max(0,(e.clientY-b.top)/b.height))}; }
+  var wrap=ov.querySelector('#crWrap');
+  wrap.addEventListener('pointerdown',function(e){ e.preventDefault(); var p=pos(e), t=e.target, hk=t.dataset&&t.dataset.h;
+    try{ wrap.setPointerCapture(e.pointerId); }catch(_){}
+    if(hk) drag={m:'h',k:hk,r0:{x:r.x,y:r.y,w:r.w,h:r.h}};
+    else if(t===box) drag={m:'mv',p0:p,r0:{x:r.x,y:r.y,w:r.w,h:r.h}};
+    else { drag={m:'new',p0:p}; r={x:p.x,y:p.y,w:0,h:0}; draw(); } });
+  wrap.addEventListener('pointermove',function(e){ if(!drag) return; e.preventDefault(); var p=pos(e), o=drag.r0, MIN=.04;
+    if(drag.m==='mv'){ r.x=Math.min(1-o.w,Math.max(0,o.x+p.x-drag.p0.x)); r.y=Math.min(1-o.h,Math.max(0,o.y+p.y-drag.p0.y)); }
+    else if(drag.m==='new'){ r.x=Math.min(p.x,drag.p0.x); r.y=Math.min(p.y,drag.p0.y); r.w=Math.abs(p.x-drag.p0.x); r.h=Math.abs(p.y-drag.p0.y); }
+    else { var x0=o.x,y0=o.y,x1=o.x+o.w,y1=o.y+o.h;
+      if(drag.k[1]==='w') x0=Math.min(p.x,x1-MIN); else x1=Math.max(p.x,x0+MIN);
+      if(drag.k[0]==='n') y0=Math.min(p.y,y1-MIN); else y1=Math.max(p.y,y0+MIN);
+      r={x:x0,y:y0,w:x1-x0,h:y1-y0}; }
+    draw(); });
+  function up(){ if(drag&&drag.m==='new'&&(r.w<.03||r.h<.03)) r={x:.15,y:.2,w:.7,h:.6}; drag=null; draw(); }
+  wrap.addEventListener('pointerup',up); wrap.addEventListener('pointercancel',up);
+  function done(v,err){ ov.remove(); if(err) no(err); else ok(v); }
+  function out(rr){ var sx=Math.round(rr.x*im.width), sy=Math.round(rr.y*im.height), sw=Math.max(1,Math.round(rr.w*im.width)), sh=Math.max(1,Math.round(rr.h*im.height));
+    var c=D.createElement('canvas'); c.width=sw; c.height=sh; c.getContext('2d').drawImage(im,sx,sy,sw,sh,0,0,sw,sh);
+    var o=new Image(); o.onload=function(){ done(o); }; o.onerror=function(){ done(im); }; o.src=c.toDataURL('image/png'); }
+  ov.querySelector('#crOk').onclick=function(){ out(r); };
+  ov.querySelector('#crAll').onclick=function(){ done(im); };
+  ov.querySelector('#crNo').onclick=function(){ var e=new Error('已取消，請重新拍照或選圖。'); e.cancel=true; done(null,e); };
+}); };
+
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   function $(i){ return document.getElementById(i); }
   document.title='病審單回覆';
@@ -2396,7 +2469,7 @@ var qrcode = function() {
   var css=document.createElement('style'); css.textContent='.wrap{max-width:820px}.sheetimg{width:100%;border:1px solid var(--line);border-radius:8px;background:#fff}.rp label.o{display:flex;gap:8px;align-items:flex-start;font-size:16px;line-height:1.6;margin:6px 0}.rp label.o input{width:20px;height:20px;flex:none;margin-top:3px}.rp textarea,.rp input[type=tel],.rp input[type=date]{font:inherit;font-size:17px;width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px}.rp .lab{font-size:14px;color:var(--sub);margin-top:10px}.rp .stb{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.rp .stb img{max-height:70px;background:#fff;border:1px solid #f0d4d0;border-radius:6px;padding:4px}.lock{background:#f8fafc;border:1px dashed var(--line);border-radius:10px;padding:10px;font-size:15px;white-space:pre-wrap;line-height:1.7}';
   document.head.appendChild(css);
   box.innerHTML='<div class="big">讀取病審單中…</div>';
-  var X=null, useStamp=false, P=null;
+  var X=null, useStamp=false, P=null, NEWST=null;
   fetch(FS+'/'+encodeURIComponent(COL)+'/RPS_'+encodeURIComponent(ID)).then(function(r){ if(r.status===404) return null; if(!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(d){ if(!d){ box.innerHTML='<div class="big">此回覆單已完成或已失效</div><div class="msg">若尚未回覆，請聯絡結核病個案管理師重新寄送。</div>'; return; } X=dec(d.fields.i.stringValue); if(X.exp&&Date.now()>X.exp){ box.innerHTML='<div class="big">此回覆 QR Code 已逾期</div><div class="msg">回覆期限為 '+rocD(X.exp)+'，請聯絡結核病個案管理師重新產生（電話 02-28712121 轉 83536 或 83677）。</div>'; return; } render(); })
     .catch(function(e){ box.innerHTML='<div class="big">讀取失敗</div><div class="msg err">'+esc(e.message||'請確認網路')+'</div>'; });
@@ -2409,15 +2482,28 @@ var qrcode = function() {
       '<label class="o"><input type="radio" name="ag" id="a1" checked>同意上開審查建議，並據以診治病患。</label>'+
       '<label class="o"><input type="radio" name="ag" id="a2">不同意上開審查建議，不同意之理由如下：</label>'+
       '<textarea id="why" rows="2" placeholder="不同意時請填寫理由" disabled></textarea>'+
-      '<div class="lab">診療醫師簽章</div>'+(X.stamp?'<div class="stb"><button class="b sec" type="button" id="useSt" style="width:auto;padding:10px 14px">🔴 使用我的電子印章</button><img id="stImg2" alt="電子印章" src="'+X.stamp+'" hidden></div>':'')+
+      '<div class="lab">診療醫師簽章</div>'+(X.stamp?'<div class="stb"><button class="b sec" type="button" id="useSt" style="width:auto;padding:10px 14px">🔴 使用我的電子印章</button><img id="stImg2" alt="電子印章" src="'+X.stamp+'" hidden></div>':
+        '<div class="stampbox" style="border:1px solid #f0d4d0;background:#fdf6f5;border-radius:12px;padding:12px;display:grid;gap:8px"><b>🔴 改用電子印章</b><span class="note" style="margin:0">（第一次使用需上傳並授權；之後簽到、病審單都可直接帶入印章）</span>'+
+        '<div class="row"><button class="b red" type="button" id="cam2">📷 拍照印章</button><button class="b sec" type="button" id="pick2">🖼 選擇圖片</button></div>'+
+        '<input type="file" id="camIn2" accept="image/*" capture="environment"><input type="file" id="picIn2" accept="image/*">'+
+        '<div class="note" style="margin:0">拍照時把蓋好的印章放在白紙上、光線充足、鏡頭正對印章；拍好後可裁切，系統會自動抓出紅色印文並去背。</div>'+
+        '<div id="stPrev2" hidden><img id="stNew" alt="印章預覽" style="max-height:80px;max-width:220px;background:#fff;border:1px solid #f0d4d0;border-radius:6px;padding:4px"></div>'+
+        '<label class="cons" id="consL2" hidden><input type="checkbox" id="cons2"><span>我是 <b>'+esc(X.doc||'')+'</b> 本人（或經本人授權）。本人同意授權本會議系統於結核病管理小組會議之簽到單、病審單及診療醫師簽章欄位，以本電子印章代替親筆簽名。（請於下方簽名框親筆簽名，作為授權紀錄）</span></label></div>')+
       '<div class="note" id="padTip2">請用手指或滑鼠在框內簽名。</div><div id="padR"></div><div class="row" style="margin-top:6px"><button class="b sec" type="button" id="clr2">重簽</button></div>'+
       '<div class="lab">回覆日期（點選日曆）</div><input type="date" id="dt" value="'+dv+'">'+'<div class="note">已自動帶入今天日期，如需更改請點選日曆。</div>'+
       '<div class="lab">聯絡電話</div><input type="tel" id="tel" value="'+esc(X.tel||'')+'" placeholder="例如：分機 12345">'+
       '<div class="msg" id="rmsg"></div><button class="b pri" type="button" id="go2" style="margin-top:8px">送出回覆</button></div>';
-    P=pad($('padR'));
+    P=pad($('padR')); try{ if(!$('dt').value) $('dt').value=dv; $('dt').valueAsDate=$('dt').valueAsDate||new Date(Date.UTC(td.getFullYear(),td.getMonth(),td.getDate())); }catch(e){}
     $('a1').onchange=$('a2').onchange=function(){ $('why').disabled=!$('a2').checked; if($('a2').checked) $('why').focus(); };
     $('clr2').onclick=function(){ P.clear(); useStamp=false; var si=$('stImg2'); if(si) si.hidden=true; $('padR').style.display=''; };
     if($('useSt')) $('useSt').onclick=function(){ useStamp=true; $('stImg2').hidden=false; $('padR').style.display='none'; $('padTip2').textContent='已選擇電子印章（按「重簽」可改為手寫）。'; };
+    if($('cam2')){ $('cam2').onclick=function(){ $('camIn2').click(); }; $('pick2').onclick=function(){ $('picIn2').click(); };
+      $('camIn2').onchange=$('picIn2').onchange=function(){ var f=this.files[0]; this.value=''; if(!f) return; var m=$('rmsg'); m.className='msg'; m.textContent='處理中…';
+        var im0=new Image(); im0.onload=function(){ m.textContent=''; window.__cropImg(im0).then(function(im){ var u=null; try{ u=redInk(im); }catch(e){} URL.revokeObjectURL(im0.src);
+            if(!u){ m.className='msg err'; m.textContent='照片裡找不到紅色印章，請在光線充足處、靠近一點重拍。'; return; }
+            NEWST=u; $('stNew').src=u; $('stPrev2').hidden=false; $('consL2').hidden=false; $('padTip2').textContent='授權電子印章需要親筆簽名：請在下方框內簽名，作為授權紀錄（回覆單上會使用印章）。'; },
+          function(e){ URL.revokeObjectURL(im0.src); m.textContent=e.message; }); };
+        im0.onerror=function(){ m.className='msg err'; m.textContent='讀不到這張照片，請再試一次。'; }; im0.src=URL.createObjectURL(f); }; }
     $('go2').onclick=submit; }
   function pad(holder){ holder.className='pad'; holder.innerHTML='<canvas></canvas><div class="base"></div><div class="ph">請在此簽名</div>';
     var cv=holder.querySelector('canvas'), ctx=cv.getContext('2d'), ph=holder.querySelector('.ph'), drawn=false, last=null;
@@ -2433,12 +2519,13 @@ var qrcode = function() {
         var sw=x1-x0, sh=y1-y0, sc=Math.min(1,600/sw,200/sh), o=document.createElement('canvas'); o.width=Math.max(1,Math.round(sw*sc)); o.height=Math.max(1,Math.round(sh*sc));
         o.getContext('2d').drawImage(cv,x0,y0,sw,sh,0,0,o.width,o.height); return o.toDataURL('image/png'); } }; }
   function submit(){ var m=$('rmsg'); m.className='msg err';
-    var a2=$('a2').checked, why=$('why').value.trim(), sig=useStamp?X.stamp:P.png(), dt=$('dt').value, tel=$('tel').value.trim();
+    var a2=$('a2').checked, why=$('why').value.trim(), hand=P.png(), sig=useStamp?X.stamp:(NEWST||hand), dt=$('dt').value, tel=$('tel').value.trim();
+    if(NEWST){ if(!$('cons2').checked){ m.textContent='使用新印章請勾選授權同意。'; return; } if(!hand){ m.textContent='授權電子印章需要在簽名框內親筆簽名，作為授權紀錄。'; return; } }
     if(a2&&!why){ m.textContent='不同意時請填寫理由。'; $('why').focus(); return; }
     if(!sig){ m.textContent='請在「診療醫師簽章」框內簽名'+(X.stamp?'，或使用電子印章':'')+'。'; return; }
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)){ m.textContent='請點選回覆日期。'; $('dt').focus(); return; }
     var p=dt.split('-'), now=new Date(), at=(now.getFullYear()-1911)+'/'+pad2(now.getMonth()+1)+'/'+pad2(now.getDate())+' '+pad2(now.getHours())+':'+pad2(now.getMinutes());
-    var o={a1:!a2,a2:a2,a2a:a2?why.slice(0,40):'',a2b:a2?why.slice(40,80):'',y2:String(+p[0]-1911),m2:String(+p[1]),d2:String(+p[2]),tel:tel,sig:sig,at:at};
+    var o={a1:!a2,a2:a2,a2a:a2?why.slice(0,40):'',a2b:a2?why.slice(40,80):'',y2:String(+p[0]-1911),m2:String(+p[1]),d2:String(+p[2]),tel:tel,sig:sig,at:at}; if(NEWST&&!useStamp){ o.stampNew=NEWST; o.consentSig=hand; }
     var b=$('go2'); b.disabled=true; b.textContent='送出中…'; m.className='msg'; m.textContent='';
     var t=Date.now();
     fetch(FS+'/'+encodeURIComponent(COL)+'?documentId=RRP_'+ID+'_'+t,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{m:{stringValue:'RR'+ID},h:{stringValue:''},s:{stringValue:'rr'},t:{integerValue:String(t)},d:{stringValue:'doc'},i:{stringValue:enc(o)}}})})
