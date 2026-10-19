@@ -42,7 +42,7 @@ input[type=file]{display:none}
   <p class="sub" id="mt">請用手機相機掃描會議室螢幕上的 QR Code</p>
   <div class="card" id="box"></div>
   <p class="note" style="margin-top:12px">名單只顯示在這支手機上，不會送到網站。簽名或印章只傳給院內系統，院內收到後即從雲端刪除。</p>
-<p class="note" id="ver" style="text-align:right;opacity:.6;margin:4px 0 0">版本 1019-1730</p>
+<p class="note" id="ver" style="text-align:right;opacity:.6;margin:4px 0 0">版本 1020-0710</p>
 </div>
 <script>//---------------------------------------------------------------------
 //
@@ -2796,21 +2796,21 @@ window.__cropImg=function(im){ return new Promise(function(ok,no){
         '<input type="file" id="camIn" accept="image/*" capture="environment"><input type="file" id="picIn" accept="image/*">'+
         '<div class="note" style="margin:0">拍照時把蓋好的印章放在白紙上、光線充足、鏡頭正對印章；系統會自動抓出紅色印文、去掉背景並裁切。</div>'+
         '<div id="stPrev" hidden><img id="stImg" alt="印章預覽"></div>'+
-        '<label class="cons" id="consL" hidden><input type="checkbox" id="cons"><span>我是 <b>'+esc(r.n)+'</b> 本人（或經本人授權）。'+CONSENT+'（請於下方簽名框親筆簽名，作為授權紀錄）</span></label>'+
+        '<label class="cons" id="consL" hidden><input type="checkbox" id="cons"><span>我是 <b>'+esc(r.n)+'</b> 本人（或經本人授權）。'+CONSENT+'</span></label>'+
       '</div>'+
       '<div class="note" id="padTip">請用手指在框內簽名；手機橫放可以簽得比較大。</div><div id="padH"></div><div class="msg" id="msg"></div>'+
       '<div class="row"><button class="b sec" id="clr">重簽</button><button class="b sec" id="back">取消</button><button class="b pri" id="go" disabled>完成</button></div>';
     var stamp=null, P2=pad($('padH'),upd);
-    function upd(){ $('go').disabled=!(P2.has()&&(!stamp||$('cons').checked)); $('go').textContent=stamp?'授權並簽到':'完成'; }
+    function upd(){ $('go').disabled=stamp?!$('cons').checked:!P2.has(); $('go').textContent=stamp?'授權並簽到':'完成'; }   /* 2026-10-20：上傳印章＋勾選授權即可簽到，不必再簽名 */
     $('clr').onclick=function(){ P2.clear(); }; $('back').onclick=list;
     $('cam').onclick=function(){ $('camIn').click(); }; $('pick').onclick=function(){ $('picIn').click(); };
     $('camIn').onchange=$('picIn').onchange=function(){ var f=this.files[0]; this.value=''; if(!f) return; $('msg').className='msg'; $('msg').textContent='處理中…';
       var im0=new Image(); im0.onload=function(){ $('msg').textContent=''; window.__cropImg(im0).then(function(im){ var u=null; try{ u=redInk(im); }catch(e){} URL.revokeObjectURL(im0.src);
         if(!u){ $('msg').className='msg err'; $('msg').textContent='照片裡找不到紅色印章，請在光線充足處、靠近一點重拍。'; return; }
-        stamp=u; $('stImg').src=u; $('stPrev').hidden=false; $('consL').hidden=false; $('padTip').textContent='授權需要親筆簽名：請在下方框內簽名，作為授權紀錄。'; $('msg').textContent=''; upd(); },function(e){ URL.revokeObjectURL(im0.src); $('msg').className='msg'; $('msg').textContent=e.message; }); };
+        stamp=u; $('stImg').src=u; $('stPrev').hidden=false; $('consL').hidden=false; $('padTip').style.display='none'; $('padH').style.display='none'; $('clr').style.display='none'; $('msg').textContent='勾選上方的授權同意，再按「授權並簽到」即完成（不必簽名）。'; upd(); },function(e){ URL.revokeObjectURL(im0.src); $('msg').className='msg'; $('msg').textContent=e.message; }); };
       im0.onerror=function(){ $('msg').className='msg err'; $('msg').textContent='讀不到這張照片，請再試一次。'; }; im0.src=URL.createObjectURL(f); };
     $('cons').onchange=upd;
-    $('go').onclick=function(){ var sig=P2.png(); if(!sig) return; if(stamp) send(r,{i:stamp,w:'stamp',g:sig}); else send(r,{i:sig,w:'sig'}); };
+    $('go').onclick=function(){ if(stamp){ if(!$('cons').checked) return; send(r,{i:stamp,w:'stamp'}); return; } var sig=P2.png(); if(!sig) return; send(r,{i:sig,w:'sig'}); };
   }
   // 名單上沒有的人：輸入姓名、燈號，手寫簽名 → 院內系統新增到列席人員
   function addNew(){
