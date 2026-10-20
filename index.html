@@ -42,7 +42,7 @@ input[type=file]{display:none}
   <p class="sub" id="mt">請用手機相機掃描會議室螢幕上的 QR Code</p>
   <div class="card" id="box"></div>
   <p class="note" style="margin-top:12px">名單只顯示在這支手機上，不會送到網站。簽名或印章只傳給院內系統，院內收到後即從雲端刪除。</p>
-<p class="note" id="ver" style="text-align:right;opacity:.6;margin:4px 0 0">版本 1020-0710</p>
+<p class="note" id="ver" style="text-align:right;opacity:.6;margin:4px 0 0">版本 1020-1800</p>
 </div>
 <script>//---------------------------------------------------------------------
 //
@@ -2775,11 +2775,11 @@ window.__cropImg=function(im){ return new Promise(function(ok,no){
     var h='<div class="big">請點選您的名字：</div>';
     var mt=+(ls(MK+'-t')||0); function signed(s){ return (ST&&ST[s])||(me===s&&(!ST||Date.now()-mt<90000)); }
     function btns(a){ return a.map(function(r){ return '<button class="who'+(signed(r.s)?' me':'')+'" data-s="'+esc(r.s)+'"><span>'+esc(r.n)+(signed(r.s)?'　✓ 已簽到':'')+'</span>'+(r.a?'<small>🔴 已授權印章</small>':'')+'</button>'; }).join(''); }
-    if(mem.length) h+='<div class="grp">出席人員</div>'+btns(mem);
+    if(mem.length) h+='<div class="grp">出席人員（委員本人請點自己的名字）</div>'+btns(mem)+'<button class="b sec" id="pxMe" style="margin-top:8px">🔁 我是代理委員（替委員出席簽到）</button>';
     var ADD=[]; try{ ADD=JSON.parse(sessionStorage.getItem('tbm-add-'+M)||'[]').filter(function(x){ return !R.some(function(r){ return r.n===x.n; }); }); }catch(e){}
     if(att.length||ADD.length) h+='<div class="grp">列席人員</div>'+btns(att)+ADD.map(function(x){ return '<div class="who me" style="cursor:default"><span>'+esc(x.n)+'　✓ 已簽到（新增）</span></div>'; }).join('');
-    h+='<button class="b sec" id="addMe" style="margin-top:14px">＋ 名單上沒有我（新增姓名）</button>';
-    box.innerHTML=h; $('addMe').onclick=addNew; if(!list._ld||Date.now()-list._ld>3000){ list._ld=Date.now(); loadST(); }
+    h+='<button class="b sec" id="addMe" style="margin-top:14px">＋ 列席人員：名單上沒有我（新增姓名）</button>';
+    box.innerHTML=h; $('addMe').onclick=addNew; if($('pxMe')) $('pxMe').onclick=proxyPick; if(!list._ld||Date.now()-list._ld>3000){ list._ld=Date.now(); loadST(); }
     [].forEach.call(box.querySelectorAll('.who'),function(b){ b.onclick=function(){ var r=R.filter(function(x){ return x.s===b.dataset.s; })[0]; if(r) (r.a?authorized(r):choose(r)); }; });
   }
   // 已授權印章：一鍵簽到，院內系統帶入印章
@@ -2811,6 +2811,24 @@ window.__cropImg=function(im){ return new Promise(function(ok,no){
       im0.onerror=function(){ $('msg').className='msg err'; $('msg').textContent='讀不到這張照片，請再試一次。'; }; im0.src=URL.createObjectURL(f); };
     $('cons').onchange=upd;
     $('go').onclick=function(){ if(stamp){ if(!$('cons').checked) return; send(r,{i:stamp,w:'stamp'}); return; } var sig=P2.png(); if(!sig) return; send(r,{i:sig,w:'sig'}); };
+  }
+  // 代理委員：先選要代理的委員，再輸入代理人姓名、燈號並簽名（院內簽到單記為「代理：姓名 燈號」，並帶入所有病審單）（2026-10-20）
+  function proxyPick(){ var mem=R.filter(function(r){ return r.s[0]==='m'; });
+    box.innerHTML='<div class="big">🔁 代理委員簽到</div><div class="note">請點選您<b>代理的委員</b>：</div>'+mem.map(function(r){ return '<button class="who" data-s="'+esc(r.s)+'"><span>'+esc(r.n)+'</span></button>'; }).join('')+'<button class="b sec" id="back" style="margin-top:12px">返回名單</button>';
+    $('back').onclick=list; [].forEach.call(box.querySelectorAll('.who'),function(b){ b.onclick=function(){ var r=R.filter(function(x){ return x.s===b.dataset.s; })[0]; if(r) proxyForm(r); }; }); }
+  function proxyForm(r){
+    box.innerHTML='<div class="big">代理 <b>'+esc(r.n)+'</b> 簽到</div><div class="note">請輸入<b>您（代理人）</b>的姓名與燈號，並在下方框內簽名。</div>'+
+      '<label class="note" style="display:block;margin:10px 0 4px">代理人姓名（可含職稱）</label><input id="pn" maxlength="8" autocomplete="name" style="font:inherit;font-size:18px;width:100%;box-sizing:border-box;padding:12px;border:1px solid #cbd5e1;border-radius:10px">'+
+      '<label class="note" style="display:block;margin:10px 0 4px">代理人燈號</label><input id="pe" maxlength="8" autocapitalize="characters" style="font:inherit;font-size:18px;width:100%;box-sizing:border-box;padding:12px;border:1px solid #cbd5e1;border-radius:10px;text-transform:uppercase">'+
+      '<div class="note" style="margin-top:12px">請用手指在框內簽名；手機橫放可以簽得比較大。</div><div id="padH"></div><div class="msg" id="msg"></div>'+
+      '<div class="row"><button class="b sec" id="clr">重簽</button><button class="b sec" id="back">返回</button><button class="b pri" id="go" disabled>完成代理簽到</button></div>';
+    var P4=pad($('padH'),upd);
+    function upd(){ $('go').disabled=!(P4.has()&&$('pn').value.trim()&&$('pe').value.trim()); }
+    $('pn').oninput=$('pe').oninput=upd; $('clr').onclick=function(){ P4.clear(); }; $('back').onclick=proxyPick;
+    $('go').onclick=function(){ var nm=$('pn').value.trim().slice(0,8), no=$('pe').value.replace(/\s+/g,'').toUpperCase().slice(0,8), sig=P4.png();
+      if(!nm||!no||!sig){ $('msg').className='msg err'; $('msg').textContent='請輸入姓名、燈號並簽名。'; return; }
+      send({s:r.s,n:r.n+'（代理：'+nm+'）'},{i:sig,w:'sig',e:'代理：'+nm+' '+no}); };
+    setTimeout(function(){ $('pn').focus(); },50);
   }
   // 名單上沒有的人：輸入姓名、燈號，手寫簽名 → 院內系統新增到列席人員
   function addNew(){
