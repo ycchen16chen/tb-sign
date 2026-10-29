@@ -42,7 +42,7 @@ input[type=file]{display:none}
   <p class="sub" id="mt">請用手機相機掃描會議室螢幕上的 QR Code</p>
   <div class="card" id="box"></div>
   <p class="note" style="margin-top:12px">名單只顯示在這支手機上，不會送到網站。簽名或印章只傳給院內系統，院內收到後即從雲端刪除。</p>
-<p class="note" id="ver" style="text-align:right;opacity:.6;margin:4px 0 0">版本 1020-1800</p>
+<p class="note" id="ver" style="text-align:right;opacity:.6;margin:4px 0 0">版本 1029-1200</p>
 </div>
 <script>//---------------------------------------------------------------------
 //
@@ -2566,7 +2566,7 @@ window.__cropImg=function(im){ return new Promise(function(ok,no){
   function dec(str){ var o=JSON.parse(str); if(sha256(KEY+'|tag|'+o.n+'|'+o.c).slice(0,24)!==o.g) throw new Error('bad'); var u=unb64(o.c), k=ks(KEY,o.n,u.length); for(var i=0;i<u.length;i++) u[i]^=k[i]; return JSON.parse(new TextDecoder().decode(u)); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   document.title='即時會議紀錄';
-  var css=document.createElement('style'); css.textContent='.mf{display:grid;gap:4px}.mf label{font-size:13px;color:var(--sub)}.mf textarea{font:inherit;font-size:17px;line-height:1.6;width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;min-height:76px;resize:vertical}.mf textarea.cur{outline:3px solid #f59e0b;outline-offset:1px}.msec{font-weight:700;font-size:15px;margin-top:10px;color:var(--acc)}#mbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0;display:grid;gap:6px}#mrec.on{background:#dc2626;color:#fff}#mst{font-size:13px;border-radius:999px;padding:5px 10px;background:#e0f2fe;color:#075985;justify-self:start}#mint{font-size:13px;color:#9a3412;min-height:1.2em}';
+  var css=document.createElement('style'); css.textContent='.mf{display:grid;gap:4px}.mf label{font-size:13px;color:var(--sub)}.mf textarea{font:inherit;font-size:17px;line-height:1.6;width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;min-height:76px;resize:none;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere}textarea[data-rk]{white-space:pre-wrap;overflow-wrap:anywhere}.mf textarea.cur{outline:3px solid #f59e0b;outline-offset:1px}.msec{font-weight:700;font-size:15px;margin-top:10px;color:var(--acc)}#mbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0;display:grid;gap:6px}#mrec.on{background:#dc2626;color:#fff}#mst{font-size:13px;border-radius:999px;padding:5px 10px;background:#e0f2fe;color:#075985;justify-self:start}#mint{font-size:13px;color:#9a3412;min-height:1.2em}';
   document.head.appendChild(css);
   document.querySelector('h1').textContent='即時會議紀錄';
   var sub=document.getElementById('mt'), box=document.getElementById('box'), note=document.querySelector('.wrap > .note');
@@ -2601,11 +2601,11 @@ window.__cropImg=function(im){ return new Promise(function(ok,no){
     if(CASES.length){ h+='<div class="msec">病例審查（共 '+CASES.length+' 案）</div>'+(RO?'':'<div class="note">勾選每一案的審查結果，會即時寫回病審單與會議紀錄。</div>');
       CASES.forEach(function(cs){ h+='<div class="mcase" style="border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:4px;margin-top:6px"><b>第 '+cs.n+' 案　'+esc(cs.name)+'</b><div class="note" style="margin:0">診療醫師：'+esc(cs.doc||'（未指定）')+(cs.reply?'　｜醫師回覆：'+cs.reply:'')+'<br>送審原因：'+esc(cs.r||'（未勾選）')+(cs.note?'（'+esc(cs.note)+'）':'')+'</div>'+
         Object.keys(SL).map(function(k){ return '<label class="cons" style="font-size:15.5px"><input type="checkbox" data-n="'+cs.n+'" data-rk="'+k+'"'+(cs.s[k]?' checked':'')+'><span>'+SL[k]+'</span></label>'; }).join('')+
-        '<input data-n="'+cs.n+'" data-rk="s8a" placeholder="8.其他（說明）" value="'+esc(cs.s.s8a||'')+'" style="font:inherit;font-size:16px;border:1px solid var(--line);border-radius:8px;padding:8px">'+
-        '<input data-n="'+cs.n+'" data-rk="s8b" placeholder="其他說明（第二行）" value="'+esc(cs.s.s8b||'')+'" style="font:inherit;font-size:16px;border:1px solid var(--line);border-radius:8px;padding:8px"></div>'; }); }
+        '<textarea data-n="'+cs.n+'" data-rk="s8a" rows="2" placeholder="8.其他（說明）" style="font:inherit;font-size:16px;line-height:1.6;border:1px solid var(--line);border-radius:8px;padding:8px;width:100%;resize:none;overflow:hidden">'+esc(cs.s.s8a||'')+'</textarea>'+
+        '<textarea data-n="'+cs.n+'" data-rk="s8b" rows="1" placeholder="其他說明（第二行）" style="font:inherit;font-size:16px;line-height:1.6;border:1px solid var(--line);border-radius:8px;padding:8px;width:100%;resize:none;overflow:hidden">'+esc(cs.s.s8b||'')+'</textarea></div>'; }); }
     if(!RO) h+='<div class="msec" id="maddSec" hidden>手機新增的項目</div><div id="madd"></div><div class="row" style="margin-top:10px"><button class="b sec" type="button" id="mAddD">＋ 新增討論事項</button><button class="b sec" type="button" id="mAddM">＋ 新增臨時動議</button></div>';
     box.innerHTML=h; KEYS={}; FB={}; F.forEach(function(f){ KEYS[f.k]=1; FB[f.k]=f.v||''; });
-    [].forEach.call(box.querySelectorAll('textarea, input[type=date][data-k]'),bind);
+    [].forEach.call(box.querySelectorAll('textarea[data-k], input[type=date][data-k]'),bind); fitAll();
     [].forEach.call(box.querySelectorAll('[data-rk]'),function(el){ var ev=el.type==='checkbox'?'change':'input', tm2=null; el.addEventListener(ev,function(){ var k=el.dataset.rk, n=+el.dataset.n, v=el.type==='checkbox'?el.checked:el.value; RVE[n+k]=Date.now();
       clearTimeout(tm2); tm2=setTimeout(function(){ Q['#'+n+k]={p:{op:'rv',n:n,k:k,v:v,dev:DEV},t:Date.now()}; push(); },el.type==='checkbox'?100:1200); }); });
     var mr=document.getElementById('mrec'); if(mr) mr.onclick=toggle;
@@ -2616,6 +2616,10 @@ window.__cropImg=function(im){ return new Promise(function(ok,no){
     var ad=document.getElementById('mAddD'); if(ad) ad.onclick=function(){ addItem('discussionItems','討論事項'); };
     var am=document.getElementById('mAddM'); if(am) am.onclick=function(){ addItem('motionItems','臨時動議'); }; }
   var KEYS={}, lastX=null, FB={}, CASES=[], RVE={};
+  /* 2026-10-29：文字框自動換行、高度隨內容加高（內容全部看得到） */
+  function fit(t){ if(!t||t.tagName!=='TEXTAREA'||!t.offsetParent) return; t.style.height='auto'; t.style.height=(t.scrollHeight+2)+'px'; }
+  function fitAll(){ [].forEach.call(document.querySelectorAll('#box textarea'),function(t){ if(t.value!==t.__fv||t.offsetWidth!==t.__fw){ t.__fv=t.value; t.__fw=t.offsetWidth; fit(t); } }); }
+  document.addEventListener('input',function(e){ fit(e.target); },true); setInterval(fitAll,700); addEventListener('resize',function(){ setTimeout(fitAll,50); });
   function attHtml(a){ return a.length?a.map(function(p){ return (p.signed?'✅ ':'⬜ ')+esc(p.name); }).join('　'):'（尚無列席人員）'; }
   function bind(t){ t.addEventListener('focus',function(){ if(t.tagName!=='TEXTAREA') return; if(cur) cur.classList.remove('cur'); cur=t; t.classList.add('cur'); }); t.addEventListener(t.type==='date'?'change':'input',function(){ want(t); }); }
   function addItem(c,head){ var sid=(c==='discussionItems'?'dp':'mp')+rnd(3);
